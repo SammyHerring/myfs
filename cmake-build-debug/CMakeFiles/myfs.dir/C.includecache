@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../logger.h
+stdio.h
+-
+
+/Users/sammy/Dropbox/1 - University/7 - S1 Operating Systems/Assignment 2/myfs/myfs.c
+stdio.h
+-
+stdlib.h
+-
+unistd.h
+-
+dirent.h
+-
+errno.h
+-
+sys/stat.h
+-
+string.h
+-
+time.h
+-
+logger.h
+-
+
