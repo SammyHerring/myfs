@@ -1,2 +1,0 @@
-[25/01/2020 14:46:42] INFO  [main] [myfs.c:48] File written to Disk Manager
-[25/01/2020 14:50:13] INFO  [main] [myfs.c:46] File written to Disk Manager
