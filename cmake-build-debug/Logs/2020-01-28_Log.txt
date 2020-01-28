@@ -1,3 +1,55 @@
 [28/01/2020 11:11:00] WARN 	[diskGenerator]		[myfs.c:331]		Disk Manager Data File Does Not Exist
 [28/01/2020 11:11:00] INFO 	[diskGenerator]		[myfs.c:341]		Disk Manager Data File Generated
 [28/01/2020 11:11:00] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:16:34] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:16:52] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:17:05] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:17:16] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:17:21] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:18:50] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:19:06] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:19:50] INFO 	[findNextAvaliableBlock]		[myfs.c:191]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:21:34] INFO 	[findNextAvaliableBlock]		[myfs.c:191]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:21:44] INFO 	[findNextAvaliableBlock]		[myfs.c:191]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:25:53] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:26:08] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:29:56] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:02] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:08] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:09] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:10] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:26] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:35] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:31:46] INFO 	[findNextAvaliableBlock]		[myfs.c:193]		File: DISK/BLOCK0/letter2.txt	Size:1791
+[28/01/2020 11:44:40] INFO 	[findNextAvaliableBlock]		[myfs.c:184]		File: DISK/BLOCK0/.	Size:192
+[28/01/2020 11:44:59] INFO 	[viewDisk]		[myfs.c:211]		Disk Manager Data File Exists
+[28/01/2020 11:45:37] INFO 	[findNextAvaliableBlock]		[myfs.c:183]		File: DISK/BLOCK0/.	Size:192
+[28/01/2020 11:45:59] INFO 	[findNextAvaliableBlock]		[myfs.c:184]		File: DISK/BLOCK0/	Size:
+[28/01/2020 11:46:12] INFO 	[findNextAvaliableBlock]		[myfs.c:184]		File: 	Size:
+[28/01/2020 11:46:39] INFO 	[findNextAvaliableBlock]		[myfs.c:184]		File: .	Size:
+[28/01/2020 11:46:47] INFO 	[viewDisk]		[myfs.c:212]		Disk Manager Data File Exists
+[28/01/2020 11:46:47] WARN 	[checkFile]		[myfs.c:341]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:47:46] INFO 	[viewDisk]		[myfs.c:213]		Disk Manager Data File Exists
+[28/01/2020 11:47:46] WARN 	[checkFile]		[myfs.c:342]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:48:01] INFO 	[viewDisk]		[myfs.c:214]		Disk Manager Data File Exists
+[28/01/2020 11:48:01] WARN 	[checkFile]		[myfs.c:343]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:48:18] INFO 	[findNextAvaliableBlock]		[myfs.c:179]		File: .	Size:
+[28/01/2020 11:48:29] INFO 	[findNextAvaliableBlock]		[myfs.c:179]		File: .
+[28/01/2020 11:48:38] INFO 	[viewDisk]		[myfs.c:215]		Disk Manager Data File Exists
+[28/01/2020 11:48:38] WARN 	[checkFile]		[myfs.c:344]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:49:02] INFO 	[viewDisk]		[myfs.c:215]		Disk Manager Data File Exists
+[28/01/2020 11:49:02] WARN 	[checkFile]		[myfs.c:344]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:49:58] INFO 	[viewDisk]		[myfs.c:213]		Disk Manager Data File Exists
+[28/01/2020 11:49:58] WARN 	[checkFile]		[myfs.c:342]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:50:20] INFO 	[viewDisk]		[myfs.c:216]		Disk Manager Data File Exists
+[28/01/2020 11:50:20] WARN 	[checkFile]		[myfs.c:345]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:52:17] INFO 	[viewDisk]		[myfs.c:218]		Disk Manager Data File Exists
+[28/01/2020 11:52:17] WARN 	[checkFile]		[myfs.c:347]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:52:53] INFO 	[viewDisk]		[myfs.c:219]		Disk Manager Data File Exists
+[28/01/2020 11:52:53] WARN 	[checkFile]		[myfs.c:348]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:53:11] INFO 	[viewDisk]		[myfs.c:219]		Disk Manager Data File Exists
+[28/01/2020 11:53:11] WARN 	[checkFile]		[myfs.c:348]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:53:33] INFO 	[viewDisk]		[myfs.c:220]		Disk Manager Data File Exists
+[28/01/2020 11:53:33] WARN 	[checkFile]		[myfs.c:349]		File with Filename 'test.txt' already exists.
+[28/01/2020 11:54:18] INFO 	[viewDisk]		[myfs.c:221]		Disk Manager Data File Exists
+[28/01/2020 11:54:18] WARN 	[checkFile]		[myfs.c:350]		File with Filename 'test.txt' already exists.

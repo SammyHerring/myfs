@@ -160,7 +160,7 @@ int findNextAvaliableBlock(int spaceRequired) {
     int blockCount = 0;
 
     while (true) {
-        char num[20];
+        char num[20] = "";
         sprintf(num, "%d", blockCount);
         char name[25] = "BLOCK";
         strcat(name, num);
@@ -168,48 +168,27 @@ int findNextAvaliableBlock(int spaceRequired) {
         char path[30] = "DISK/";
         strcat(path,name);
 
-        DIR *directory = opendir(path);
-        if (directory) {
-            //Directory exists. Check avaliable size.
-
-            int byteCount = 0;
-            struct dirent *dirrent;
-
-            while ((dirrent = readdir(directory)) != NULL) {
-
-                if (dirrent->d_type == DT_REG) //Removes any symlinks from results
-                {
-                    char fileName[50] = "";
-                    strcat(fileName, path);
-                    strcat(fileName, "/");
-                    strcat(fileName, dirrent->d_name);
-
-                    int size = getFileSize(fileName);
-
-                    LOGINFO("File: %s\tSize:%d",fileName, size);
-
-                    byteCount = byteCount + size;
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(path);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    char *fileName = dir->d_name;
+                    char fullPath[30] = "";
+                    strcat(fullPath, path);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, fileName);
+                    int size = getFileSize(fullPath);
+                    LOGINFONR("File: %s\t|\tExtent: %d",fullPath, size);
                 }
             }
-
-            LOGINFO("%s Size: %d", path, byteCount);
-
-            closedir(directory);
-            blockCount++;
-
-            break;
-
-        } else if (ENOENT == errno) {
-            //Directory with required size does not exist. Create new block.
-            return generateNextBlock();
-        } else {
-            //Directory detection failed. Kill script.
-            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
-            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
-            exit(EXIT_FAILURE);
+            closedir(d);
         }
-    }
 
+        blockCount++;
+        break;
+    }
     return 1;
 }
 
