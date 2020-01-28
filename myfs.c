@@ -17,19 +17,29 @@
 #include <logger.h>
 #include <stdbool.h>
 
-void directoryGenerator(void);
+void diskGenerator(void);
+void viewDisk(void);
 void writeFile(void);
+bool checkDisk(void);
+bool checkFile();
+int fileCount(void);
+int generateNextBlock(void);
+int findNextAvaliableBlock(int spaceRequired);
 
 struct file {
-    int id;
     char fileName[100];
     int extent;
+    int deleted;
 };
 
 int main(int argc, char *argv[]) {
 
-    directoryGenerator();
+    int space = 50;
 
+    diskGenerator();
+    //generateNextBlock();
+    findNextAvaliableBlock(space);
+    viewDisk();
     writeFile();
 
     return 0;
@@ -68,138 +78,199 @@ int main(int argc, char *argv[]) {
 }
 
 void writeFile() {
-    FILE *diskManagerIn;
-    FILE *diskManagerOut;
 
-    struct file writeFile = {0, "test.txt", 100};
+    FILE *diskManager;
     struct file input;
 
-    // Check if Disk Manager File Exists
-    diskManagerIn = fopen("DISK/diskManager.dat", "r");
+    struct file writeFile = {"test.txt", 100, 0};
 
-    if (diskManagerIn == NULL) {
-        fclose(diskManagerIn);
-
-        //Disk Manager File Does Not Exist
-        LOGWARN("Disk Manager Data File Does Not Exist");
-
-        //Create and Open Disk Manager Data File
-        diskManagerIn = fopen("DISK/diskManager.dat", "w");
-        LOGINFO("Creating Disk Manager Data File");
-
-        if (diskManagerIn == NULL) {
-            LOGERROR("Disk Manager Data File Creation Error");
-            fclose(diskManagerIn);
-            exit(EXIT_FAILURE);
-        } else {
-            //Write file to Disk manager
-            fwrite(&writeFile, sizeof(struct file), 1, diskManagerIn);
-            if (&fwrite != 0) {
-                LOGINFO("File Successfully Written to Disk Manager");
-                fclose(diskManagerIn);
-            } else {
-                LOGERROR("File Failed to Write Disk Manger");
-                fclose(diskManagerIn);
-                exit(EXIT_FAILURE);
-            }
-        }
-
+    if (!checkDisk()) {
+        LOGERROR("Disk Manager Data File Does Not Exist");
+        exit(EXIT_FAILURE);
     } else {
-        fclose(diskManagerIn);
-
-        //Disk Manager Data File Exists
-        diskManagerOut = fopen("DISK/diskManager.dat", "r");
-        LOGINFO("Disk Manager Data File Exists");
-
-        if (diskManagerOut == NULL) {
-            LOGERROR("Disk Manager Data File Write Error");
+        if (checkFile(writeFile)) {
             exit(EXIT_FAILURE);
         } else {
-            LOGINFO("Disk Manager Data File Read");
+            LOGINFONR("--\tWRITING TO DISK\t--");
 
-            bool found = false; //Boolean to identify whether file exists
-            struct file disk[1000];
-
-            LOGINFO("--\tFiles on DISK\t--");
-            LOGINFO("--\tSTART\t--");
-            // Read Disk Manager Data File
-            while(fread(&input, sizeof(struct file), 1, diskManagerOut)) {
-                LOGINFO("File (%d) on DISK: %s | Extent: %d", input.id, input.fileName, input.extent);
-
-                if (strcmp(input.fileName, writeFile.fileName) == 0 && input.id == writeFile.id) {
-                    LOGINFO("HTTING1");
-                    found = true;
-                } else {
-                    LOGINFO("HTTING2");
-                    struct file fileInput;
-                    fileInput.id =  input.id;
-                    strcpy(fileInput.fileName, input.fileName);
-                    fileInput.extent = input.extent;
-                    disk[input.id] = fileInput;
-                }
-            }
-            LOGINFO("--\tEND\t--");
-
-            fclose(diskManagerOut);
-
-            if (found) {
-                //File already exists, abandon write file.
-                LOGWARN("File with name '%s' already exists. Exiting.", writeFile.fileName);
+            FILE* data;
+            if ( (data = fopen("DISK/diskManager.dat", "a")) == NULL )
+            {
+                printf("Error opening file\n");
                 exit(EXIT_FAILURE);
-            } else {
-                //File does not already exist, write File
-                disk[writeFile.id] = writeFile;
+            }
 
-                diskManagerIn = fopen("DISK/diskManager.dat", "w");
+            fwrite(&writeFile, sizeof(struct file) * 1, 1, data);
+            fclose(data);
 
-                if (diskManagerIn == NULL) {
-                    LOGERROR("Disk Manager Data File Write Error");
-                    fclose(diskManagerIn);
-                    exit(EXIT_FAILURE);
-                } else {
-                    //Write file to Disk manager
+            exit(EXIT_SUCCESS);
+        }
+    }
+}
 
-                    fwrite(&disk, sizeof(disk), 1, diskManagerIn);
-                    if (&fwrite != 0) {
-                        LOGINFO("File Successfully Written to Disk Manager");
-                        fclose(diskManagerIn);
-                        exit(EXIT_SUCCESS);
-                    } else {
-                        LOGERROR("File Failed to Write Disk Manger");
-                        fclose(diskManagerIn);
-                        exit(EXIT_FAILURE);
-                    }
+int generateNextBlock() {
+    int blockCount = 0;
+    while (true) {
+        char num[20];
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path,name);
+
+        DIR *directory = opendir(path);
+        if (directory) {
+            //Directory exists. Increase count and loop.
+            closedir(directory);
+            blockCount++;
+        } else if (ENOENT == errno) {
+            //Directory does not exist. Create 'BLOCKX' directory.
+            mkdir(path, 0777);
+            LOGINFO("%s Directory Generated", name);
+            return blockCount;
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void deleteEmptyBlocks() {
+
+}
+
+int getFileSize(char fileName[50]) {
+    FILE* data;
+    data = fopen(fileName, "r");
+
+    struct stat st;
+    stat(fileName, &st);
+    int size = st.st_size;
+
+    fclose(data);
+
+    return size;
+}
+
+int findNextAvaliableBlock(int spaceRequired) {
+
+    int blockCount = 0;
+
+    while (true) {
+        char num[20];
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path,name);
+
+        DIR *directory = opendir(path);
+        if (directory) {
+            //Directory exists. Check avaliable size.
+
+            int byteCount = 0;
+            struct dirent *dirrent;
+
+            while ((dirrent = readdir(directory)) != NULL) {
+
+                if (dirrent->d_type == DT_REG) //Removes any symlinks from results
+                {
+                    char fileName[50] = "";
+                    strcat(fileName, path);
+                    strcat(fileName, "/");
+                    strcat(fileName, dirrent->d_name);
+
+                    int size = getFileSize(fileName);
+
+                    LOGINFO("File: %s\tSize:%d",fileName, size);
+
+                    byteCount = byteCount + size;
                 }
             }
-        }
 
-        fclose(diskManagerOut);
+            LOGINFO("%s Size: %d", path, byteCount);
+
+            closedir(directory);
+            blockCount++;
+
+            break;
+
+        } else if (ENOENT == errno) {
+            //Directory with required size does not exist. Create new block.
+            return generateNextBlock();
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    return 1;
+}
+
+bool checkDisk() {
+    FILE* diskManager = fopen("DISK/diskManager.dat", "r");
+    if (diskManager == NULL) {
+        fclose(diskManager);
+        return false;
+    } else {
+        fclose(diskManager);
+        return true;
     }
 }
 
 void viewDisk() {
-    FILE* diskManager;
-    struct file input;
 
-    diskManager = fopen("DISK/diskManager.dat", "r");
-
-    if (diskManager == NULL) {
-        LOGERROR("Disk Manager Data File Read Error");
-        exit(EXIT_FAILURE);
+    if (!checkDisk()) {
+        LOGERROR("Disk Manager Data File Does Not Exist");
     } else {
         LOGINFO("Disk Manager Data File Exists");
 
-        LOGINFO("--\tFiles on DISK\t--");
-        LOGINFO("--\tSTART\t--");
+        FILE* diskManager = fopen("DISK/diskManager.dat", "r");
+
+        int fileCount = 0;
+        struct file input;
+
+        LOGINFONR("--\tFiles on DISK\t--");
+        LOGINFONR("--\tSTART DIR\t--");
         // Read Disk Manager Data File
         while (fread(&input, sizeof(struct file), 1, diskManager)) {
-            LOGINFO("File (%d) on DISK: %s | Extent: %d", input.id, input.fileName, input.extent);
+            LOGINFONR("File (%d) on DISK: %s\t|\tExtent: %d", fileCount, input.fileName, input.extent);
+            fileCount++;
         }
-        LOGINFO("--\tEND\t--");
+        if (fileCount == 0) LOGINFONR("NO FILES FOUND");
+        LOGINFONR("--\tEND DIR\t\t--\t|\tFile Count: %d", fileCount);
+        fclose(diskManager);
     }
 }
 
-void directoryGenerator() {
+int fileCount() {
+    int fileCount = 0;
+
+    if (!checkDisk()) {
+        LOGERROR("Disk Manager Data File Does Not Exist. Exiting.");
+        exit(EXIT_FAILURE);
+    } else {
+        FILE* diskManager;
+        diskManager = fopen("DISK/diskManager.dat", "r");
+
+        struct file input;
+
+        // Read Disk Manager Data File
+        while (fread(&input, sizeof(struct file), 1, diskManager)) {
+            fileCount++;
+        }
+
+        return fileCount;
+    }
+}
+
+void diskGenerator() {
 
     //Ensure Logs Directory exists
     DIR *log = opendir("Logs");
@@ -214,6 +285,22 @@ void directoryGenerator() {
         //Directory detection failed. Kill script.
         LOGERROR("\'opendir()\' failed to detect Logs directory. Exiting.");
         fprintf(stderr, "\'opendir()\' failed to detect Logs directory. Exiting.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //Ensure Output Directory exists
+    DIR *output = opendir("Output");
+    if (output) {
+        //Directory exists. Proceed with log creation.
+        closedir(output);
+    } else if (ENOENT == errno) {
+        //Directory does not exist. Create logs directory.
+        mkdir("Output", 0777);
+        LOGINFO("Output Directory Generated");
+    } else {
+        //Directory detection failed. Kill script.
+        LOGERROR("\'opendir()\' failed to detect Output directory. Exiting.");
+        fprintf(stderr, "\'opendir()\' failed to detect Output directory. Exiting.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -233,21 +320,57 @@ void directoryGenerator() {
         exit(EXIT_FAILURE);
     }
 
-    //Ensure DISK Directory exists
-    DIR *output = opendir("Output");
-    if (output) {
-        //Directory exists. Proceed with log creation.
-        closedir(output);
-    } else if (ENOENT == errno) {
-        //Directory does not exist. Create logs directory.
-        mkdir("Output", 0777);
-        LOGINFO("Output Directory Generated");
+    // Check if Disk Manager Data File Exists
+    FILE* diskManager;
+    diskManager = fopen("DISK/diskManager.dat", "r");
+
+    if (diskManager == NULL) {
+        fclose(diskManager);
+
+        //Disk Manager File Does Not Exist
+        LOGWARN("Disk Manager Data File Does Not Exist");
+
+        //Create Disk Manager Data File
+        diskManager = fopen("DISK/diskManager.dat", "w");
+
+        if (diskManager == NULL) {
+            LOGERROR("Disk Manager Data File Creation Error");
+            fclose(diskManager);
+            exit(EXIT_FAILURE);
+        } else {
+            LOGINFO("Disk Manager Data File Generated");
+            fclose(diskManager);
+        }
+    }
+}
+
+bool checkFile(struct file writeFile) {
+    bool found = false;
+
+    if (checkDisk()) {
+
+        FILE* diskManager = fopen("DISK/diskManager.dat", "r");
+
+        struct file input;
+
+        // Read Disk Manager Data File
+        while (fread(&input, sizeof(struct file), 1, diskManager)) {
+
+            //Check if File with Filename or ID Already Exists
+            if (strcmp(input.fileName, writeFile.fileName) == 0) {
+                LOGWARN("File with Filename '%s' already exists.", writeFile.fileName);
+                found = true;
+            }
+        }
+
+        fclose(diskManager);
+
     } else {
-        //Directory detection failed. Kill script.
-        LOGERROR("\'opendir()\' failed to detect Output directory. Exiting.");
-        fprintf(stderr, "\'opendir()\' failed to detect Output directory. Exiting.\n");
+        LOGERROR("Disk Manager Data File Does Not Exist. Exiting.");
         exit(EXIT_FAILURE);
     }
+
+    return found;
 }
 
 char *getTimeStamp(void) {

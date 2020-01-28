@@ -1,0 +1,3 @@
+[28/01/2020 11:11:00] WARN 	[diskGenerator]		[myfs.c:331]		Disk Manager Data File Does Not Exist
+[28/01/2020 11:11:00] INFO 	[diskGenerator]		[myfs.c:341]		Disk Manager Data File Generated
+[28/01/2020 11:11:00] INFO 	[findNextAvaliableBlock]		[myfs.c:189]		File: DISK/BLOCK0/letter2.txt	Size:1791

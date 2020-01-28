@@ -22,7 +22,7 @@ char *getDateStamp(void);
 //Logger Macro
 //Prints to console and appends to log file
 #define __LOG__(format, loglevel, ...) ({\
-printf("%s %-5s [%s] [%s:%d] " format "\n", getTimeStamp(), loglevel, __func__, __SHORT_FILE__, __LINE__, ## __VA_ARGS__); \
+printf("%s %-5s\t[%s]\t\t[%s:%d]\t\t" format "\n", getTimeStamp(), loglevel, __func__, __SHORT_FILE__, __LINE__, ## __VA_ARGS__); \
 time_t t = time(NULL);\
 static char fullPath[30] = "Logs/";\
 static char* time;\
@@ -30,13 +30,13 @@ time = getDateStamp();\
 strcat(time, "_Log.txt");\
 strcat(fullPath, time);\
 FILE *out = fopen(fullPath, "a"); \
-fprintf(out, "%s %-5s [%s] [%s:%d] " format "\n", getTimeStamp(), loglevel, __func__, __SHORT_FILE__, __LINE__, ## __VA_ARGS__); \
+fprintf(out, "%s %-5s\t[%s]\t\t[%s:%d]\t\t" format "\n", getTimeStamp(), loglevel, __func__, __SHORT_FILE__, __LINE__, ## __VA_ARGS__); \
 fclose(out);\
 })
 
 //Prints to console but no record (NR)
 #define __LOGNR__(format, loglevel, ...) ({\
-printf("%s %-5s [%s] [%s:%d] " format "\n", getTimeStamp(), loglevel, __func__, __SHORT_FILE__, __LINE__, ## __VA_ARGS__); \
+printf("%s %-5s\t[%s]\t\t[%s:%d]\t\t" format "\n", getTimeStamp(), loglevel, __func__, __SHORT_FILE__, __LINE__, ## __VA_ARGS__); \
 })
 
 
