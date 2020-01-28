@@ -34,11 +34,12 @@ struct file {
 
 int main(int argc, char *argv[]) {
 
-    int space = 50;
+    int space = 30;
 
     diskGenerator();
     //generateNextBlock();
-    findNextAvaliableBlock(space);
+    int block = findNextAvaliableBlock(space);
+    LOGINFO("%d",block);
     viewDisk();
     writeFile();
 
@@ -168,10 +169,13 @@ int findNextAvaliableBlock(int spaceRequired) {
         char path[30] = "DISK/";
         strcat(path,name);
 
+        int byteCount = 0;
+
         DIR *d;
         struct dirent *dir;
         d = opendir(path);
-        if (d) {
+        if (d)
+        {
             while ((dir = readdir(d)) != NULL) {
                 if (dir->d_type == DT_REG) {
                     char *fileName = dir->d_name;
@@ -180,16 +184,30 @@ int findNextAvaliableBlock(int spaceRequired) {
                     strcat(fullPath, "/");
                     strcat(fullPath, fileName);
                     int size = getFileSize(fullPath);
+                    byteCount = byteCount + size;
                     LOGINFONR("File: %s\t|\tExtent: %d",fullPath, size);
                 }
             }
             closedir(d);
+            LOGINFONR("%s Total Bytes: %d", name, byteCount);
+
+            if ((spaceRequired <= (512-byteCount)) && (byteCount < 512)) {
+                return blockCount;
+            }
+
+        } else if (ENOENT == errno) {
+            //Directory with required size does not exist. Create new block.
+            //Return new block as next available.
+            return generateNextBlock();
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
         }
 
         blockCount++;
-        break;
     }
-    return 1;
 }
 
 bool checkDisk() {
