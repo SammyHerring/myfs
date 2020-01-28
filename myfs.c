@@ -17,14 +17,18 @@
 #include <logger.h>
 #include <stdbool.h>
 
-void diskGenerator(void);
-void viewDisk(void);
 void writeFile(void);
-bool checkDisk(void);
-bool checkFile();
-int fileCount(void);
 int generateNextBlock(void);
-int findNextAvaliableBlock(int spaceRequired);
+void deleteEmptyBlocks(void);
+int getFileSize(char fileName[50]);
+int findNextAvailableBlock(int spaceRequired);
+bool checkDisk(void);
+void viewDisk(void);
+int fileCount(void);
+void diskGenerator(void);
+bool checkFile();
+char *getTimeStamp(void);
+char *getDateStamp(void);
 
 struct file {
     char fileName[100];
@@ -34,22 +38,11 @@ struct file {
 
 int main(int argc, char *argv[]) {
 
-    int space = 30;
-
-    diskGenerator();
-    //generateNextBlock();
-    int block = findNextAvaliableBlock(space);
-    LOGINFO("%d",block);
-    viewDisk();
-    writeFile();
-
-    return 0;
-
     int opt;
 
-// put ':' in the starting of the
-// string so that program can
-//distinguish between '?' and ':'
+    // put ':' in the starting of the
+    // string so that program can
+    //distinguish between '?' and ':'
     while ((opt = getopt(argc, argv, ":if:lrx")) != -1) {
         switch (opt) { // NOLINT(hicpp-multiway-paths-covered)
             case 'i':
@@ -69,13 +62,25 @@ int main(int argc, char *argv[]) {
         }
     }
 
-// optind is for the extra arguments
-// which are not parsed
+    // optind is for the extra arguments
+    // which are not parsed
     for (; optind < argc; optind++) {
         printf("extra arguments: %s\n", argv[optind]);
     }
 
     return 0;
+
+    //    int space = 30;
+    //
+    //    diskGenerator();
+    //    generateNextBlock();
+    //    int block = findNextAvailableBlock(space);
+    //    LOGINFONR("Next Available Block with %d Bytes: BLOCK%d", space, block);
+    //    deleteEmptyBlocks();
+    //    viewDisk();
+    //    writeFile();
+    //
+    //    return 0;
 }
 
 void writeFile() {
@@ -140,7 +145,57 @@ int generateNextBlock() {
 }
 
 void deleteEmptyBlocks() {
+    int blockCount = 0;
 
+    while (true) {
+        char num[20] = "";
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path,name);
+
+        int byteCount = 0;
+
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(path);
+        bool empty = false;
+        if (d)
+        {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    char *fileName = dir->d_name;
+                    char fullPath[30] = "";
+                    strcat(fullPath, path);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, fileName);
+                    int size = getFileSize(fullPath);
+                    byteCount = byteCount + size;
+                }
+            }
+            closedir(d);
+            //If BLOCK empty, delete BLOCK.
+            if (byteCount <= 0) {
+                rmdir(path);
+                LOGINFO("%s Deleted from DISK", name);
+            }
+
+
+        } else if (ENOENT == errno) {
+            //Directory with required size does not exist. Create new block.
+            //Return new block as next available.
+            break;
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
+        }
+
+        blockCount++;
+    }
 }
 
 int getFileSize(char fileName[50]) {
@@ -156,7 +211,7 @@ int getFileSize(char fileName[50]) {
     return size;
 }
 
-int findNextAvaliableBlock(int spaceRequired) {
+int findNextAvailableBlock(int spaceRequired) {
 
     int blockCount = 0;
 
