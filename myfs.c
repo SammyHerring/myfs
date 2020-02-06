@@ -17,11 +17,14 @@
 #include <logger.h>
 #include <stdbool.h>
 
+void retrieveFile(char *retrievePath, char *outputPath);
+void storeFile(char *storeFilePath);
 void writeFile(void);
 int generateNextBlock(void);
 void deleteEmptyBlocks(void);
 int getFileSize(char fileName[50]);
 int findNextAvailableBlock(int spaceRequired);
+int checkBlockRemaining(int block);
 bool checkDisk(void);
 void viewDisk(void);
 int fileCount(void);
@@ -29,6 +32,7 @@ void diskGenerator(void);
 bool checkFile();
 char *getTimeStamp(void);
 char *getDateStamp(void);
+char *removeExtension(const char *filename);
 
 struct file {
     char fileName[100];
@@ -38,34 +42,72 @@ struct file {
 
 int main(int argc, char *argv[]) {
 
+    diskGenerator(); //Initialise required directories and disk manager file
+
     int opt;
+
+    char *retrievePath = "";
+    char *locationPath = "Output/";
 
     // put ':' in the starting of the
     // string so that program can
     //distinguish between '?' and ':'
-    while ((opt = getopt(argc, argv, ":if:lrx")) != -1) {
+    while ((opt = getopt(argc, argv, ": v r: o: s: h")) != -1) {
         switch (opt) { // NOLINT(hicpp-multiway-paths-covered)
-            case 'i':
-            case 'l':
+            case 'v':
+                viewDisk();
+                return 0;
             case 'r':
-                printf("Option: %c\n", opt);
+                if (optind == 3) {
+                    //Call RetrieveFile() and End
+                    retrievePath = optarg;
+                    retrieveFile(retrievePath, locationPath);
+                    return 0;
+                } else if (optind == 5) {
+                    //Set Retrieve and Pass to Case 'o'
+                    locationPath = optarg;
+                } else {
+                    LOGERROR("Script Wrapper Function Selection Error");
+                }
                 break;
-            case 'f':
-                printf("Filename: %s\n", optarg);
-                break;
+            case 'o':
+                if (optind == 3) {
+                    //Only R no Output
+                    LOGERRORNR("Retrieve (-r) Operation required for Output Selection Argument. For help, see man page with 'man ./myfs-help'.");
+                    return 1;
+                } else if (optind == 5) {
+                    //Set output location path from optarg
+                    //Call RetrieveFile() and End
+                    retrievePath = optarg;
+                    retrieveFile(retrievePath, locationPath);
+                    return 0;
+                } else {
+                    LOGERROR("Script Wrapper Function Selection Error");
+                }
+                return 0;
+            case 's':
+                storeFile(optarg);
+                return 0;
+            case 'h':
+                LOGINFONR("For help, see man page with 'man ./myfs-help'.");
+                return 0;
             case ':':
-                printf("Option requires a value\n");
-                break;
-            case '?':
-                printf("Unknown Option: %c\n", optopt);
-                break;
+                LOGERRORNR("Option requires a value");
+                return 0;
+            default:
+                LOGERRORNR("Unknown arguments passed. See help with 'man ./myfs-help'");
+                return 0;
         }
+    }
+
+    if (optind == 1) {
+        LOGERRORNR("No argument provided. See help with 'man ./myfs-help'");
     }
 
     // optind is for the extra arguments
     // which are not parsed
     for (; optind < argc; optind++) {
-        printf("extra arguments: %s\n", argv[optind]);
+        LOGWARNNR("Unknown additional arguments: '%s' ignored. See help with 'man ./myfs-help'.", argv[optind]);
     }
 
     return 0;
@@ -81,6 +123,83 @@ int main(int argc, char *argv[]) {
     //    writeFile();
     //
     //    return 0;
+}
+
+void retrieveFile(char *retrievePath, char *outputPath) {
+    printf("%s\n", retrievePath);
+    printf("%s\n", outputPath);
+}
+
+void storeFile(char *storeFilePath) {
+
+    FILE* inputFile = fopen(storeFilePath, "rb");
+    if (!inputFile) { LOGERROR("Cannot read store file. Exiting."); exit(EXIT_FAILURE); };
+
+    int existingFileSize = getFileSize(storeFilePath);
+    int newFileSize = existingFileSize;
+    int splitCount = 0;
+
+    LOGINFONR("%s", storeFilePath);
+    LOGINFONR("%d", existingFileSize);
+    LOGINFONR("%d", newFileSize);
+
+    int block = 0;
+    int remaining = 0;
+
+    while (newFileSize > 0) {
+        block = findNextAvailableBlock(1);
+        remaining = checkBlockRemaining(block);
+        char *newFileBlockName = "";
+
+        LOGINFONR("Block Avaliable: %d", block);
+        LOGINFONR("Block Remaining: %d", remaining);
+
+        //Get Full New Block File Path for part of File
+        char num[20];
+        sprintf(num, "%d/", block);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path,name);
+
+        newFileBlockName = removeExtension(storeFilePath);
+        newFileBlockName = strrchr(newFileBlockName, '/') ? strrchr(newFileBlockName, '/') + 1 : newFileBlockName;
+        strcat(path, newFileBlockName);
+
+        char* charBuffer = path;
+        int count = splitCount;
+        sprintf(charBuffer, "%s%d%s",path, count, ".txt");
+
+        newFileBlockName = charBuffer;
+        LOGINFONR("BLOCK FILE NAME: %s", newFileBlockName);
+
+
+
+        FILE* outputFile = fopen(newFileBlockName, "w");
+        if (!outputFile) { LOGERROR("Cannot write store file. Exiting."); exit(EXIT_FAILURE); };
+
+        while (remaining > 0) {
+
+            char* buffer = (char*)malloc(512);
+
+            size_t byteRead = fread(buffer, sizeof(char), remaining, inputFile);
+
+            remaining -= byteRead;
+            newFileSize -= byteRead;
+
+            if (byteRead == 0) { splitCount++; break; }
+
+            fwrite(buffer, sizeof(char), byteRead, outputFile);
+
+        }
+
+        fclose(outputFile);
+        splitCount++;
+    }
+
+    fclose(inputFile);
+    exit(EXIT_SUCCESS);
 }
 
 void writeFile() {
@@ -133,7 +252,7 @@ int generateNextBlock() {
         } else if (ENOENT == errno) {
             //Directory does not exist. Create 'BLOCKX' directory.
             mkdir(path, 0777);
-            LOGINFO("%s Directory Generated", name);
+            LOGINFONR("%s Directory Generated.", name);
             return blockCount;
         } else {
             //Directory detection failed. Kill script.
@@ -206,6 +325,11 @@ int getFileSize(char fileName[50]) {
     stat(fileName, &st);
     int size = st.st_size;
 
+    if (size < 0) {
+        LOGERROR("File State Size Read Error. Exiting.");
+        exit(EXIT_FAILURE);
+    }
+
     fclose(data);
 
     return size;
@@ -240,7 +364,7 @@ int findNextAvailableBlock(int spaceRequired) {
                     strcat(fullPath, fileName);
                     int size = getFileSize(fullPath);
                     byteCount = byteCount + size;
-                    LOGINFONR("File: %s\t|\tExtent: %d",fullPath, size);
+//                    LOGDEBUGNR("File: %s\t|\tExtent: %d",fullPath, size);
                 }
             }
             closedir(d);
@@ -253,7 +377,8 @@ int findNextAvailableBlock(int spaceRequired) {
         } else if (ENOENT == errno) {
             //Directory with required size does not exist. Create new block.
             //Return new block as next available.
-            return generateNextBlock();
+            generateNextBlock();
+            return blockCount;
         } else {
             //Directory detection failed. Kill script.
             LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
@@ -262,6 +387,49 @@ int findNextAvailableBlock(int spaceRequired) {
         }
 
         blockCount++;
+    }
+}
+
+int checkBlockRemaining(int block) {
+    char num[20] = "";
+    sprintf(num, "%d", block);
+    char name[25] = "BLOCK";
+    strcat(name, num);
+
+    char path[30] = "DISK/";
+    strcat(path,name);
+
+    int byteCount = 0;
+
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(path);
+    if (d)
+    {
+        while ((dir = readdir(d)) != NULL) {
+            if (dir->d_type == DT_REG) {
+                char *fileName = dir->d_name;
+                char fullPath[30] = "";
+                strcat(fullPath, path);
+                strcat(fullPath, "/");
+                strcat(fullPath, fileName);
+                int size = getFileSize(fullPath);
+                byteCount = byteCount + size;
+            }
+        }
+        closedir(d);
+
+        return 512-byteCount;
+
+    } else if (ENOENT == errno) {
+        //Directory with required size does not exist. Create new block.
+        LOGERROR("Block%d Directly Could Not Be Found. Exiting.", block);
+        exit(EXIT_FAILURE);
+    } else {
+        //Directory detection failed. Kill script.
+        LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+        fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -441,4 +609,16 @@ char *getDateStamp(void) {
     strftime(result, sizeof(result), "%Y-%m-%d", localtime(&t));
 
     return result;
+}
+
+char *removeExtension(const char *filename) {
+    size_t len = strlen(filename);
+    char *newfilename = malloc(len-2);
+    if (!newfilename) {
+        LOGERROR("Error Removing Extension from New Block Filename. Exiting");
+        exit(EXIT_FAILURE);
+    }
+    memcpy(newfilename, filename, len-4);
+    newfilename[len - 3] = 0;
+    return newfilename;
 }
