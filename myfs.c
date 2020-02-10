@@ -19,6 +19,7 @@
 
 void retrieveFile(char *retrievePath, char *outputPath);
 void storeFile(char *storeFilePath);
+void deleteFile(char *deleteFileName);
 void writeFile(void);
 int generateNextBlock(void);
 void deleteEmptyBlocks(void);
@@ -32,13 +33,16 @@ void diskGenerator(void);
 bool checkFile();
 char *getTimeStamp(void);
 char *getDateStamp(void);
-char *removeExtension(const char *filename);
+char *removetxtExtension(const char *filename);
+char *removeElementIdentiferExtension(char *str);
 
 struct file {
     char fileName[100];
     int extent;
     int deleted;
 };
+
+int BLOCKLIMIT = 512; //Maximum permitted Block Size (Unit: Bytes)
 
 int main(int argc, char *argv[]) {
 
@@ -48,6 +52,9 @@ int main(int argc, char *argv[]) {
 
     char *retrievePath = "";
     char *locationPath = "Output/";
+
+    deleteFile("letter1.txt");
+    return 0;
 
     // put ':' in the starting of the
     // string so that program can
@@ -154,7 +161,8 @@ void storeFile(char *storeFilePath) {
         LOGINFONR("Block Avaliable: %d", block);
         LOGINFONR("Block Remaining: %d", remaining);
 
-        //Get Full New Block File Path for part of File
+        //Get Full New Block File Path for given part of File
+        //Example: fileName-[0..n].txt
         char num[20];
         sprintf(num, "%d/", block);
         char name[25] = "BLOCK";
@@ -163,25 +171,24 @@ void storeFile(char *storeFilePath) {
         char path[30] = "DISK/";
         strcat(path,name);
 
-        newFileBlockName = removeExtension(storeFilePath);
+        newFileBlockName = removetxtExtension(storeFilePath);
         newFileBlockName = strrchr(newFileBlockName, '/') ? strrchr(newFileBlockName, '/') + 1 : newFileBlockName;
         strcat(path, newFileBlockName);
 
         char* charBuffer = path;
         int count = splitCount;
-        sprintf(charBuffer, "%s%d%s",path, count, ".txt");
+        sprintf(charBuffer, "%s-%d%s",path, count, ".txt"); //Adds dash to distinguish between file name and file element count number
 
         newFileBlockName = charBuffer;
         LOGINFONR("BLOCK FILE NAME: %s", newFileBlockName);
 
-
-
+        //Writes new partial file byte by byte until Block limit is reached
         FILE* outputFile = fopen(newFileBlockName, "w");
         if (!outputFile) { LOGERROR("Cannot write store file. Exiting."); exit(EXIT_FAILURE); };
 
         while (remaining > 0) {
 
-            char* buffer = (char*)malloc(512);
+            char* buffer = (char*)malloc(BLOCKLIMIT);
 
             size_t byteRead = fread(buffer, sizeof(char), remaining, inputFile);
 
@@ -200,6 +207,65 @@ void storeFile(char *storeFilePath) {
 
     fclose(inputFile);
     exit(EXIT_SUCCESS);
+}
+
+void deleteFile(char *deleteFileName) {
+    int blockCount = 0;
+
+    while (true) {
+        char num[20] = "";
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path,name);
+
+        LOGDEBUGNR("%s", path);
+
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(path);
+        if (d)
+        {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    char *fileName = dir->d_name;
+                    char fullPath[30] = "";
+                    strcat(fullPath, path);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, fileName);
+
+                    LOGDEBUGNR("%s", removeElementIdentiferExtension(fileName));
+                    LOGDEBUGNR("%s", removetxtExtension(deleteFileName));
+
+                    char* blockElementFileName = removeElementIdentiferExtension(fileName);
+                    char* requestedFileName = removetxtExtension(deleteFileName);
+
+                    if (strcmp(blockElementFileName, requestedFileName) == 0) {
+                        LOGDEBUG("DELETE");
+                        remove(fullPath);
+                    }
+                }
+            }
+            closedir(d);
+        } else if (ENOENT == errno) {
+            //Directory does not exist. Block search ends.
+            if (blockCount == 0) {
+                LOGINFONR("File '%s' did not exist.", deleteFileName);
+            }
+            break;
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
+        }
+
+        blockCount++;
+    }
+
+    deleteEmptyBlocks();
 }
 
 void writeFile() {
@@ -301,7 +367,6 @@ void deleteEmptyBlocks() {
                 LOGINFO("%s Deleted from DISK", name);
             }
 
-
         } else if (ENOENT == errno) {
             //Directory with required size does not exist. Create new block.
             //Return new block as next available.
@@ -370,7 +435,7 @@ int findNextAvailableBlock(int spaceRequired) {
             closedir(d);
             LOGINFONR("%s Total Bytes: %d", name, byteCount);
 
-            if ((spaceRequired <= (512-byteCount)) && (byteCount < 512)) {
+            if ((spaceRequired <= (BLOCKLIMIT-byteCount)) && (byteCount < BLOCKLIMIT)) {
                 return blockCount;
             }
 
@@ -419,7 +484,7 @@ int checkBlockRemaining(int block) {
         }
         closedir(d);
 
-        return 512-byteCount;
+        return BLOCKLIMIT-byteCount;
 
     } else if (ENOENT == errno) {
         //Directory with required size does not exist. Create new block.
@@ -611,7 +676,10 @@ char *getDateStamp(void) {
     return result;
 }
 
-char *removeExtension(const char *filename) {
+//Check for .txt file extension
+
+//Removes the .txt file extension of filename manipulation
+char *removetxtExtension(const char *filename) {
     size_t len = strlen(filename);
     char *newfilename = malloc(len-2);
     if (!newfilename) {
@@ -621,4 +689,16 @@ char *removeExtension(const char *filename) {
     memcpy(newfilename, filename, len-4);
     newfilename[len - 3] = 0;
     return newfilename;
+}
+
+//Removes the file element identifier from the fileName for validation
+char *removeElementIdentiferExtension(char *fileNameID) {
+    char *ptr;
+
+    ptr = strchr(fileNameID, '-');
+    if (ptr != NULL) {
+        *ptr = '\0';
+    }
+
+    return fileNameID;
 }
