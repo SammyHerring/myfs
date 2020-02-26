@@ -90,33 +90,33 @@ int main(int argc, char *argv[]) {
                 storeFile(optarg);
                 return 0;
             case 'r':
-                if (optind == 3) {
+                if (argc == 3) {
                     //Call RetrieveFile() and End
                     retrievePath = optarg;
                     retrieveFile(retrievePath, locationPath);
                     return 0;
-                } else if (optind == 5) {
+                } else if (argc == 5) {
                     //Set Retrieve and Pass to Case 'o'
-                    locationPath = optarg;
+                    retrievePath = optarg;
                 } else {
                     LOGERROR("Script Wrapper Function Selection Error");
                 }
                 break;
             case 'o':
-                if (optind == 2) {
+                if (argc == 2) {
                     //Only Output Function Requested - no Retrieval Operation
                     LOGERRORNR(
                             "Retrieve (-r) Operation required for Output Selection Argument. For help, see man page with 'man ./myfs-help'.");
                     return 1;
-                } else if (optind == 3) {
+                } else if (argc == 3) {
                     //Only R no Output
                     LOGERRORNR(
                             "Retrieve (-r) Operation required for Output Selection Argument. For help, see man page with 'man ./myfs-help'.");
                     return 1;
-                } else if (optind == 5) {
+                } else if (argc == 5) {
                     //Set output location path from optarg
                     //Call RetrieveFile() and End
-                    retrievePath = optarg;
+                    locationPath = optarg;
                     retrieveFile(retrievePath, locationPath);
                     return 0;
                 } else {
@@ -292,11 +292,41 @@ bool storeFileBlock(char *storeFilePath) {
 //Retrieve File from Blocks
 bool retrieveFileBlock(char *retrievePath, char *outputPath) {
 
+    //Check required file exists
     if (!checkFileExist(retrievePath)) {
-        LOGWARN("File %s does not exist.", retrievePath);
+        LOGWARNNR("File %s does not exist.", retrievePath);
         return false;
     }
 
+    //Append .txt extension
+    strcat(retrievePath, ".txt");
+
+    //If no output selected, append file name and extension to default file path
+    char *target = malloc(strlen(outputPath) + strlen(retrievePath) + 1);
+    if (strcmp(outputPath, "Output/") == 0) {
+        strcpy(target, outputPath);
+        strcat(target, retrievePath);
+        //free(target);
+    } else {
+        strcat(target, outputPath);
+    }
+
+    //Open file to write to
+    FILE *outputFile = fopen(target, "w");
+    if (!outputFile) {
+        LOGERROR("Cannot write to output path. Exiting.");
+        return false;
+    };
+
+    int elementCount = countFilesRecursively(retrievePath, "DISK", true);
+    int elementIndex = 0;
+
+    while (elementIndex <= elementCount) {
+        LOGINFONR("Index: %d\tCount: %d", elementIndex, elementCount);
+        elementIndex++;
+    }
+
+    fclose(outputFile);
     return true;
 }
 
