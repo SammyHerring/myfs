@@ -1,5 +1,5 @@
 /*
- * Name: 	MCOMD3PST ASSIGNMENT 2 | logger.h
+ * Name: 	MCOMD3PST ASSIGNMENT 2 | ./myfs
  * Purpose:	File System Simulation
  * Author:	Samuel Steven David Herring
  * UserID:	sh1042
@@ -17,52 +17,77 @@
 #include <logger.h>
 #include <stdbool.h>
 
-void retrieveFile(char *retrievePath, char *outputPath);
-void storeFile(char *storeFilePath);
-void deleteFile(char *deleteFileName);
-void writeFile(void);
-int generateNextBlock(void);
-void deleteEmptyBlocks(void);
-int getFileSize(char fileName[50]);
-int findNextAvailableBlock(int spaceRequired);
-int checkBlockRemaining(int block);
-bool checkDisk(void);
-void viewDisk(void);
-int fileCount(void);
-void diskGenerator(void);
-bool checkFile();
-char *getTimeStamp(void);
-char *getDateStamp(void);
-char *removetxtExtension(const char *filename);
-char *removeElementIdentiferExtension(char *str);
-
-struct file {
-    char fileName[100];
-    int extent;
-    int deleted;
-};
-
+// --- START    || GLOBALS ---
+//Global Variables
 int BLOCKLIMIT = 512; //Maximum permitted Block Size (Unit: Bytes)
 
-int main(int argc, char *argv[]) {
+// --- START    || FILE DEFINITIONS ---
+//Main File Functions
+void storeFile(char *storeFilePath);
 
+void retrieveFile(char *retrievePath, char *outputPath);
+
+void deleteFile(char *deleteFileName);
+
+//Block Manager Functions
+bool storeFileBlock(char *storeFilePath);
+
+bool retrieveFileBlock(char *retrievePath, char *outputPath);
+
+bool deleteFileBlock(char *deleteFileName);
+
+//Utilities
+//Disk Operations
+void diskGenerator(void);
+
+//Block Operations
+int generateNextBlock();
+
+bool deleteEmptyBlocks();
+
+int getFileSize(char fileName[50]);
+
+int findNextAvailableBlock(int spaceRequired);
+
+int countNumberOfBlocks();
+
+int checkBlockRemaining(int block);
+//File Operations
+bool checkFileExist(char *fileName);
+
+int countFilesRecursively(char *fileName, char *basePath, bool outermost);
+//Validation and Text Manipulation Operations
+bool checkFileValid(char *filePath);
+
+char *removeFilePath(char *fullName);
+
+char *getFilenameExtension(char *filename);
+
+char *removetxtExtension(char *filename);
+
+char *removeElementIdentiferExtension(char *fileNameID);
+
+//Time Stamp Operations
+char *getTimeStamp(void);
+
+char *getDateStamp(void);
+// --- END      || FILE DEFINITIONS ---
+// --- END      || GLOBALS ---
+
+// --- START    || MAIN FILE FUNCTIONS ---
+int main(int argc, char *argv[]) {
     diskGenerator(); //Initialise required directories and disk manager file
 
     int opt;
 
-    char *retrievePath = "";
+    char *retrievePath;
     char *locationPath = "Output/";
 
-    deleteFile("letter1.txt");
-    return 0;
-
-    // put ':' in the starting of the
-    // string so that program can
-    //distinguish between '?' and ':'
-    while ((opt = getopt(argc, argv, ": v r: o: s: h")) != -1) {
+    while ((opt = getopt(argc, argv, ": r: o: s: d: h")) != -1) {
         switch (opt) { // NOLINT(hicpp-multiway-paths-covered)
-            case 'v':
-                viewDisk();
+            case 's':
+                //Check requested file is valid
+                storeFile(optarg);
                 return 0;
             case 'r':
                 if (optind == 3) {
@@ -78,9 +103,15 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 'o':
-                if (optind == 3) {
+                if (optind == 2) {
+                    //Only Output Function Requested - no Retrieval Operation
+                    LOGERRORNR(
+                            "Retrieve (-r) Operation required for Output Selection Argument. For help, see man page with 'man ./myfs-help'.");
+                    return 1;
+                } else if (optind == 3) {
                     //Only R no Output
-                    LOGERRORNR("Retrieve (-r) Operation required for Output Selection Argument. For help, see man page with 'man ./myfs-help'.");
+                    LOGERRORNR(
+                            "Retrieve (-r) Operation required for Output Selection Argument. For help, see man page with 'man ./myfs-help'.");
                     return 1;
                 } else if (optind == 5) {
                     //Set output location path from optarg
@@ -92,74 +123,118 @@ int main(int argc, char *argv[]) {
                     LOGERROR("Script Wrapper Function Selection Error");
                 }
                 return 0;
-            case 's':
-                storeFile(optarg);
+            case 'd':
+                deleteFile(optarg);
                 return 0;
             case 'h':
                 LOGINFONR("For help, see man page with 'man ./myfs-help'.");
                 return 0;
             case ':':
-                LOGERRORNR("Option requires a value");
+                LOGERROR("Requested File System mode requires an argument. See help with 'man ./myfs-help'");
                 return 0;
             default:
-                LOGERRORNR("Unknown arguments passed. See help with 'man ./myfs-help'");
+                LOGERROR("Unknown arguments passed. See help with 'man ./myfs-help'");
                 return 0;
         }
     }
 
     if (optind == 1) {
-        LOGERRORNR("No argument provided. See help with 'man ./myfs-help'");
+        LOGERROR("No argument provided. See help with 'man ./myfs-help'");
     }
 
-    // optind is for the extra arguments
-    // which are not parsed
+    // Optind used to consider secondary arguments. Secondary arguments not parsed.
     for (; optind < argc; optind++) {
-        LOGWARNNR("Unknown additional arguments: '%s' ignored. See help with 'man ./myfs-help'.", argv[optind]);
+        LOGWARN("Unknown additional arguments: '%s' ignored. See help with 'man ./myfs-help'.", argv[optind]);
     }
 
     return 0;
-
-    //    int space = 30;
-    //
-    //    diskGenerator();
-    //    generateNextBlock();
-    //    int block = findNextAvailableBlock(space);
-    //    LOGINFONR("Next Available Block with %d Bytes: BLOCK%d", space, block);
-    //    deleteEmptyBlocks();
-    //    viewDisk();
-    //    writeFile();
-    //
-    //    return 0;
 }
 
-void retrieveFile(char *retrievePath, char *outputPath) {
-    printf("%s\n", retrievePath);
-    printf("%s\n", outputPath);
-}
-
+//Store File Function from Menu
 void storeFile(char *storeFilePath) {
+    if (checkFileValid(storeFilePath)) {
+        LOGINFONR("File System -- Store");
+        if (storeFileBlock(storeFilePath)) {
+            LOGINFO("Storing File %s Succeeded.", storeFilePath);
+            exit(EXIT_SUCCESS);
+        } else {
+            LOGWARN("Storing File %s Failed.", storeFilePath);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        LOGWARN("Invalid File Detected. Exiting.");
+    }
+}
 
-    FILE* inputFile = fopen(storeFilePath, "rb");
-    if (!inputFile) { LOGERROR("Cannot read store file. Exiting."); exit(EXIT_FAILURE); };
+//Retrieve File Function from Menu
+void retrieveFile(char *retrievePath, char *outputPath) {
+    if (checkFileValid(retrievePath)) {
+        LOGINFONR("File System -- Retrieve");
+        if (retrieveFileBlock(retrievePath, outputPath)) {
+            LOGINFO("Retrieving File %s Succeeded.", retrievePath);
+            exit(EXIT_SUCCESS);
+        } else {
+            LOGWARN("Retrieving File %s Failed.", retrievePath);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        LOGWARN("Invalid File Detected. Exiting.");
+    }
+}
 
+//Delete File Function from Menu
+void deleteFile(char *deleteFileName) {
+    if (checkFileValid(deleteFileName)) {
+        LOGINFONR("File System -- Delete");
+        if (deleteFileBlock(deleteFileName)) {
+            LOGINFO("Deleting File %s Succeeded.", deleteFileName);
+            exit(EXIT_SUCCESS);
+        } else {
+            LOGWARN("Deleting File %s Failed.", deleteFileName);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        LOGWARN("Invalid File Detected. Exiting.");
+    }
+}
+// --- END      || MAIN FILE FUNCTIONS ---
+
+// -- START     || BLOCK MANAGER FUNCTIONS ---
+//Store File to Block
+bool storeFileBlock(char *storeFilePath) {
+
+    //Check if file already exists in DISK and Overwrite if required
+    char *fileCheck = removeFilePath(storeFilePath);
+    if (checkFileExist(fileCheck)) {
+        LOGINFO("Overwriting File: %s.txt", fileCheck);
+        if (deleteFileBlock(fileCheck)) {
+            LOGINFONR("RECORD Cleanup successful.");
+        } else {
+            LOGERRORNR("RECORD Cleanup not successful.");
+            return false;
+        }
+        strcat(storeFilePath, ".txt");
+    }
+
+    FILE *inputFile = fopen(storeFilePath, "rb");
+    if (!inputFile) {
+        LOGERROR("Cannot read store file. Exiting.");
+        exit(EXIT_FAILURE);
+    };
+
+    //File Stats
     int existingFileSize = getFileSize(storeFilePath);
     int newFileSize = existingFileSize;
     int splitCount = 0;
 
-    LOGINFONR("%s", storeFilePath);
-    LOGINFONR("%d", existingFileSize);
-    LOGINFONR("%d", newFileSize);
-
+    //Per Block Stats
     int block = 0;
     int remaining = 0;
 
     while (newFileSize > 0) {
-        block = findNextAvailableBlock(1);
+        block = findNextAvailableBlock(512); //Find next full empty block. May be adjusted dependant on FileSystem.
         remaining = checkBlockRemaining(block);
-        char *newFileBlockName = "";
-
-        LOGINFONR("Block Avaliable: %d", block);
-        LOGINFONR("Block Remaining: %d", remaining);
+        char *newFileBlockName;
 
         //Get Full New Block File Path for given part of File
         //Example: fileName-[0..n].txt
@@ -169,26 +244,31 @@ void storeFile(char *storeFilePath) {
         strcat(name, num);
 
         char path[30] = "DISK/";
-        strcat(path,name);
+        strcat(path, name);
 
         newFileBlockName = removetxtExtension(storeFilePath);
         newFileBlockName = strrchr(newFileBlockName, '/') ? strrchr(newFileBlockName, '/') + 1 : newFileBlockName;
         strcat(path, newFileBlockName);
 
-        char* charBuffer = path;
+        char *charBuffer = path;
         int count = splitCount;
-        sprintf(charBuffer, "%s-%d%s",path, count, ".txt"); //Adds dash to distinguish between file name and file element count number
+        sprintf(charBuffer, "%s-%d%s", path, count,
+                ".txt"); //Adds dash to distinguish between file name and file element count number
 
         newFileBlockName = charBuffer;
-        LOGINFONR("BLOCK FILE NAME: %s", newFileBlockName);
+        if (splitCount == 0) LOGINFONR("GENERATED BLOCKS:");
+        LOGINFONR("\t--> BLOCK: %s", newFileBlockName);
 
         //Writes new partial file byte by byte until Block limit is reached
-        FILE* outputFile = fopen(newFileBlockName, "w");
-        if (!outputFile) { LOGERROR("Cannot write store file. Exiting."); exit(EXIT_FAILURE); };
+        FILE *outputFile = fopen(newFileBlockName, "w");
+        if (!outputFile) {
+            LOGERROR("Cannot write store file. Exiting.");
+            return false;
+        };
 
         while (remaining > 0) {
 
-            char* buffer = (char*)malloc(BLOCKLIMIT);
+            char *buffer = (char *) malloc(BLOCKLIMIT);
 
             size_t byteRead = fread(buffer, sizeof(char), remaining, inputFile);
 
@@ -206,11 +286,28 @@ void storeFile(char *storeFilePath) {
     }
 
     fclose(inputFile);
-    exit(EXIT_SUCCESS);
+    return true;
 }
 
-void deleteFile(char *deleteFileName) {
+//Retrieve File from Blocks
+bool retrieveFileBlock(char *retrievePath, char *outputPath) {
+
+    if (!checkFileExist(retrievePath)) {
+        LOGWARN("File %s does not exist.", retrievePath);
+        return false;
+    }
+
+    return true;
+}
+
+//Delete File from Blocks
+bool deleteFileBlock(char *deleteFileName) {
     int blockCount = 0;
+
+    if (!checkFileExist(deleteFileName)) {
+        LOGWARN("File %s does not exist.", deleteFileName);
+        return false;
+    }
 
     while (true) {
         char num[20] = "";
@@ -219,15 +316,13 @@ void deleteFile(char *deleteFileName) {
         strcat(name, num);
 
         char path[30] = "DISK/";
-        strcat(path,name);
-
-        LOGDEBUGNR("%s", path);
+        strcat(path, name);
 
         DIR *d;
         struct dirent *dir;
         d = opendir(path);
-        if (d)
-        {
+
+        if (d) {
             while ((dir = readdir(d)) != NULL) {
                 if (dir->d_type == DT_REG) {
                     char *fileName = dir->d_name;
@@ -236,325 +331,49 @@ void deleteFile(char *deleteFileName) {
                     strcat(fullPath, "/");
                     strcat(fullPath, fileName);
 
-                    LOGDEBUGNR("%s", removeElementIdentiferExtension(fileName));
-                    LOGDEBUGNR("%s", removetxtExtension(deleteFileName));
+                    char *blockElementFileName = removeElementIdentiferExtension(fileName);
+                    char *requestedFileName = removetxtExtension(deleteFileName);
 
-                    char* blockElementFileName = removeElementIdentiferExtension(fileName);
-                    char* requestedFileName = removetxtExtension(deleteFileName);
+                    if (blockCount == 0) LOGDEBUGNR("DELETED BLOCKS:");
 
                     if (strcmp(blockElementFileName, requestedFileName) == 0) {
-                        LOGDEBUG("DELETE");
                         remove(fullPath);
+                        LOGDEBUGNR("\t--> DELETED: %s", fullPath);
                     }
                 }
             }
             closedir(d);
         } else if (ENOENT == errno) {
             //Directory does not exist. Block search ends.
-            if (blockCount == 0) {
-                LOGINFONR("File '%s' did not exist.", deleteFileName);
+
+            if (blockCount >= countFilesRecursively("BLOCK", "DISK", true)) {
+                break;
             }
-            break;
-        } else {
-            //Directory detection failed. Kill script.
-            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
-            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
-            exit(EXIT_FAILURE);
-        }
-
-        blockCount++;
-    }
-
-    deleteEmptyBlocks();
-}
-
-void writeFile() {
-
-    FILE *diskManager;
-    struct file input;
-
-    struct file writeFile = {"test.txt", 100, 0};
-
-    if (!checkDisk()) {
-        LOGERROR("Disk Manager Data File Does Not Exist");
-        exit(EXIT_FAILURE);
-    } else {
-        if (checkFile(writeFile)) {
-            exit(EXIT_FAILURE);
-        } else {
-            LOGINFONR("--\tWRITING TO DISK\t--");
-
-            FILE* data;
-            if ( (data = fopen("DISK/diskManager.dat", "a")) == NULL )
-            {
-                printf("Error opening file\n");
-                exit(EXIT_FAILURE);
-            }
-
-            fwrite(&writeFile, sizeof(struct file) * 1, 1, data);
-            fclose(data);
-
-            exit(EXIT_SUCCESS);
-        }
-    }
-}
-
-int generateNextBlock() {
-    int blockCount = 0;
-    while (true) {
-        char num[20];
-        sprintf(num, "%d", blockCount);
-        char name[25] = "BLOCK";
-        strcat(name, num);
-
-        char path[30] = "DISK/";
-        strcat(path,name);
-
-        DIR *directory = opendir(path);
-        if (directory) {
-            //Directory exists. Increase count and loop.
-            closedir(directory);
             blockCount++;
-        } else if (ENOENT == errno) {
-            //Directory does not exist. Create 'BLOCKX' directory.
-            mkdir(path, 0777);
-            LOGINFONR("%s Directory Generated.", name);
-            return blockCount;
+            continue;
         } else {
             //Directory detection failed. Kill script.
             LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
             fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
-            exit(EXIT_FAILURE);
-        }
-    }
-}
-
-void deleteEmptyBlocks() {
-    int blockCount = 0;
-
-    while (true) {
-        char num[20] = "";
-        sprintf(num, "%d", blockCount);
-        char name[25] = "BLOCK";
-        strcat(name, num);
-
-        char path[30] = "DISK/";
-        strcat(path,name);
-
-        int byteCount = 0;
-
-        DIR *d;
-        struct dirent *dir;
-        d = opendir(path);
-        bool empty = false;
-        if (d)
-        {
-            while ((dir = readdir(d)) != NULL) {
-                if (dir->d_type == DT_REG) {
-                    char *fileName = dir->d_name;
-                    char fullPath[30] = "";
-                    strcat(fullPath, path);
-                    strcat(fullPath, "/");
-                    strcat(fullPath, fileName);
-                    int size = getFileSize(fullPath);
-                    byteCount = byteCount + size;
-                }
-            }
-            closedir(d);
-            //If BLOCK empty, delete BLOCK.
-            if (byteCount <= 0) {
-                rmdir(path);
-                LOGINFO("%s Deleted from DISK", name);
-            }
-
-        } else if (ENOENT == errno) {
-            //Directory with required size does not exist. Create new block.
-            //Return new block as next available.
-            break;
-        } else {
-            //Directory detection failed. Kill script.
-            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
-            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
-            exit(EXIT_FAILURE);
+            return false;
         }
 
         blockCount++;
     }
-}
 
-int getFileSize(char fileName[50]) {
-    FILE* data;
-    data = fopen(fileName, "r");
-
-    struct stat st;
-    stat(fileName, &st);
-    int size = st.st_size;
-
-    if (size < 0) {
-        LOGERROR("File State Size Read Error. Exiting.");
-        exit(EXIT_FAILURE);
-    }
-
-    fclose(data);
-
-    return size;
-}
-
-int findNextAvailableBlock(int spaceRequired) {
-
-    int blockCount = 0;
-
-    while (true) {
-        char num[20] = "";
-        sprintf(num, "%d", blockCount);
-        char name[25] = "BLOCK";
-        strcat(name, num);
-
-        char path[30] = "DISK/";
-        strcat(path,name);
-
-        int byteCount = 0;
-
-        DIR *d;
-        struct dirent *dir;
-        d = opendir(path);
-        if (d)
-        {
-            while ((dir = readdir(d)) != NULL) {
-                if (dir->d_type == DT_REG) {
-                    char *fileName = dir->d_name;
-                    char fullPath[30] = "";
-                    strcat(fullPath, path);
-                    strcat(fullPath, "/");
-                    strcat(fullPath, fileName);
-                    int size = getFileSize(fullPath);
-                    byteCount = byteCount + size;
-//                    LOGDEBUGNR("File: %s\t|\tExtent: %d",fullPath, size);
-                }
-            }
-            closedir(d);
-            LOGINFONR("%s Total Bytes: %d", name, byteCount);
-
-            if ((spaceRequired <= (BLOCKLIMIT-byteCount)) && (byteCount < BLOCKLIMIT)) {
-                return blockCount;
-            }
-
-        } else if (ENOENT == errno) {
-            //Directory with required size does not exist. Create new block.
-            //Return new block as next available.
-            generateNextBlock();
-            return blockCount;
-        } else {
-            //Directory detection failed. Kill script.
-            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
-            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
-            exit(EXIT_FAILURE);
-        }
-
-        blockCount++;
-    }
-}
-
-int checkBlockRemaining(int block) {
-    char num[20] = "";
-    sprintf(num, "%d", block);
-    char name[25] = "BLOCK";
-    strcat(name, num);
-
-    char path[30] = "DISK/";
-    strcat(path,name);
-
-    int byteCount = 0;
-
-    DIR *d;
-    struct dirent *dir;
-    d = opendir(path);
-    if (d)
-    {
-        while ((dir = readdir(d)) != NULL) {
-            if (dir->d_type == DT_REG) {
-                char *fileName = dir->d_name;
-                char fullPath[30] = "";
-                strcat(fullPath, path);
-                strcat(fullPath, "/");
-                strcat(fullPath, fileName);
-                int size = getFileSize(fullPath);
-                byteCount = byteCount + size;
-            }
-        }
-        closedir(d);
-
-        return BLOCKLIMIT-byteCount;
-
-    } else if (ENOENT == errno) {
-        //Directory with required size does not exist. Create new block.
-        LOGERROR("Block%d Directly Could Not Be Found. Exiting.", block);
-        exit(EXIT_FAILURE);
+    if (deleteEmptyBlocks()) {
+        LOGINFONR("BLOCK Cleanup successful.");
     } else {
-        //Directory detection failed. Kill script.
-        LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
-        fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
-        exit(EXIT_FAILURE);
+        LOGWARNNR("BLOCK Cleanup unsuccessful.");
     }
+
+    return true;
 }
+// -- END       || BLOCK MANAGER FUNCTIONS ---
 
-bool checkDisk() {
-    FILE* diskManager = fopen("DISK/diskManager.dat", "r");
-    if (diskManager == NULL) {
-        fclose(diskManager);
-        return false;
-    } else {
-        fclose(diskManager);
-        return true;
-    }
-}
-
-void viewDisk() {
-
-    if (!checkDisk()) {
-        LOGERROR("Disk Manager Data File Does Not Exist");
-    } else {
-        LOGINFO("Disk Manager Data File Exists");
-
-        FILE* diskManager = fopen("DISK/diskManager.dat", "r");
-
-        int fileCount = 0;
-        struct file input;
-
-        LOGINFONR("--\tFiles on DISK\t--");
-        LOGINFONR("--\tSTART DIR\t--");
-        // Read Disk Manager Data File
-        while (fread(&input, sizeof(struct file), 1, diskManager)) {
-            LOGINFONR("File (%d) on DISK: %s\t|\tExtent: %d", fileCount, input.fileName, input.extent);
-            fileCount++;
-        }
-        if (fileCount == 0) LOGINFONR("NO FILES FOUND");
-        LOGINFONR("--\tEND DIR\t\t--\t|\tFile Count: %d", fileCount);
-        fclose(diskManager);
-    }
-}
-
-int fileCount() {
-    int fileCount = 0;
-
-    if (!checkDisk()) {
-        LOGERROR("Disk Manager Data File Does Not Exist. Exiting.");
-        exit(EXIT_FAILURE);
-    } else {
-        FILE* diskManager;
-        diskManager = fopen("DISK/diskManager.dat", "r");
-
-        struct file input;
-
-        // Read Disk Manager Data File
-        while (fread(&input, sizeof(struct file), 1, diskManager)) {
-            fileCount++;
-        }
-
-        return fileCount;
-    }
-}
-
+// --- START    ||  UTILITIES ---
+// --- START    ||  DISK OPERATIONS ---
+//Generate all required directories
 void diskGenerator() {
 
     //Ensure Logs Directory exists
@@ -604,91 +423,344 @@ void diskGenerator() {
         fprintf(stderr, "\'opendir()\' failed to detect DISK directory. Exiting.\n");
         exit(EXIT_FAILURE);
     }
+}
+// --- END      ||  DISK OPERATIONS ---
 
-    // Check if Disk Manager Data File Exists
-    FILE* diskManager;
-    diskManager = fopen("DISK/diskManager.dat", "r");
+// --- START    || BLOCK OPERATIONS ---
+//Generate next block
+int generateNextBlock() {
+    int blockCount = 0;
+    while (true) {
+        char num[20];
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
 
-    if (diskManager == NULL) {
-        fclose(diskManager);
+        char path[30] = "DISK/";
+        strcat(path, name);
 
-        //Disk Manager File Does Not Exist
-        LOGWARN("Disk Manager Data File Does Not Exist");
-
-        //Create Disk Manager Data File
-        diskManager = fopen("DISK/diskManager.dat", "w");
-
-        if (diskManager == NULL) {
-            LOGERROR("Disk Manager Data File Creation Error");
-            fclose(diskManager);
-            exit(EXIT_FAILURE);
+        DIR *directory = opendir(path);
+        if (directory) {
+            //Directory exists. Increase count and loop.
+            closedir(directory);
+            blockCount++;
+        } else if (ENOENT == errno) {
+            //Directory does not exist. Create 'BLOCKX' directory.
+            mkdir(path, 0777);
+            //LOGINFONR("%s Directory Generated.", name); //Commented for console simplicity. Use for verbose out.
+            return blockCount;
         } else {
-            LOGINFO("Disk Manager Data File Generated");
-            fclose(diskManager);
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
         }
     }
 }
+//Delete empty blocks
+bool deleteEmptyBlocks() {
+    int blockCount = 0;
 
-bool checkFile(struct file writeFile) {
-    bool found = false;
+    while (true) {
+        char num[20] = "";
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
 
-    if (checkDisk()) {
+        char path[30] = "DISK/";
+        strcat(path, name);
 
-        FILE* diskManager = fopen("DISK/diskManager.dat", "r");
+        int byteCount = 0;
 
-        struct file input;
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(path);
 
-        // Read Disk Manager Data File
-        while (fread(&input, sizeof(struct file), 1, diskManager)) {
-
-            //Check if File with Filename or ID Already Exists
-            if (strcmp(input.fileName, writeFile.fileName) == 0) {
-                LOGWARN("File with Filename '%s' already exists.", writeFile.fileName);
-                found = true;
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    char *fileName = dir->d_name;
+                    char fullPath[30] = "";
+                    strcat(fullPath, path);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, fileName);
+                    int size = getFileSize(fullPath);
+                    byteCount = byteCount + size;
+                }
             }
+            closedir(d);
+            //If BLOCK empty, delete BLOCK.
+            if (byteCount <= 0) {
+                rmdir(path);
+                //LOGINFONR("%s Directory Deleted", name); //Commented for console simplicity. Use for verbose out.
+            }
+
+        } else if (ENOENT == errno) {
+            //Block does not exist
+            if (blockCount >= countFilesRecursively("BLOCK", "DISK", true)) {
+                break;
+            }
+
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            return false;
         }
 
-        fclose(diskManager);
+        blockCount++;
+    }
+    return true;
+}
 
-    } else {
-        LOGERROR("Disk Manager Data File Does Not Exist. Exiting.");
+//Get a file size in bytes
+int getFileSize(char fileName[50]) {
+    FILE* data;
+    data = fopen(fileName, "r");
+
+    struct stat st;
+    stat(fileName, &st);
+    int size = st.st_size;
+
+    if (size < 0) {
+        LOGERROR("File State Size Read Error. Exiting.");
         exit(EXIT_FAILURE);
     }
 
-    return found;
+    fclose(data);
+
+    return size;
 }
 
-char *getTimeStamp(void) {
-    time_t t = time(NULL);
+//Find next available block with required space
+int findNextAvailableBlock(int spaceRequired) {
 
-    static char result[21];
-    strftime(result, sizeof(result), "[%d/%m/%Y %T]", localtime(&t));
+    int blockCount = 0;
 
-    return result;
+    while (true) {
+        char num[20] = "";
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path, name);
+
+        int byteCount = 0;
+
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(path);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    char *fileName = dir->d_name;
+                    char fullPath[30] = "";
+                    strcat(fullPath, path);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, fileName);
+                    int size = getFileSize(fullPath);
+                    byteCount = byteCount + size;
+                }
+            }
+            closedir(d);
+
+            if ((spaceRequired <= (BLOCKLIMIT - byteCount)) && (byteCount < BLOCKLIMIT)) {
+                return blockCount;
+            }
+
+        } else if (ENOENT == errno) {
+            //Directory with required size does not exist. Create new block.
+            //Return new block as next available.
+            generateNextBlock();
+            return blockCount;
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
+        }
+
+        blockCount++;
+    }
 }
 
-char *getDateStamp(void) {
-    time_t t = time(NULL);
+//Count number of blocks
+int countNumberOfBlocks() {
 
-    static char result[20];
-    strftime(result, sizeof(result), "%Y-%m-%d", localtime(&t));
+    int blockCount = 0;
 
-    return result;
+    while (true) {
+        char num[20] = "";
+        sprintf(num, "%d", blockCount);
+        char name[25] = "BLOCK";
+        strcat(name, num);
+
+        char path[30] = "DISK/";
+        strcat(path, name);
+
+        int byteCount = 0;
+
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(path);
+
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    char *fileName = dir->d_name;
+                    char fullPath[30] = "";
+                    strcat(fullPath, path);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, fileName);
+                    int size = getFileSize(fullPath);
+                    byteCount = byteCount + size;
+                }
+            }
+            closedir(d);
+
+        } else if (ENOENT == errno) {
+            //Directory does not exist. Return current block count as number of blocks.
+            return blockCount;
+
+        } else {
+            //Directory detection failed. Kill script.
+            LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+            fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+            exit(EXIT_FAILURE);
+        }
+        blockCount++;
+    }
+}
+
+//Check bytes remaining in block
+int checkBlockRemaining(int block) {
+    char num[20] = "";
+    sprintf(num, "%d", block);
+    char name[25] = "BLOCK";
+    strcat(name, num);
+
+    char path[30] = "DISK/";
+    strcat(path, name);
+
+    int byteCount = 0;
+
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(path);
+    if (d) {
+        while ((dir = readdir(d)) != NULL) {
+            if (dir->d_type == DT_REG) {
+                char *fileName = dir->d_name;
+                char fullPath[30] = "";
+                strcat(fullPath, path);
+                strcat(fullPath, "/");
+                strcat(fullPath, fileName);
+                int size = getFileSize(fullPath);
+                byteCount = byteCount + size;
+            }
+        }
+        closedir(d);
+
+        return BLOCKLIMIT - byteCount;
+
+    } else if (ENOENT == errno) {
+        //Directory with required size does not exist. Create new block.
+        LOGERROR("Block%d Directly Could Not Be Found. Exiting.", block);
+        exit(EXIT_FAILURE);
+    } else {
+        //Directory detection failed. Kill script.
+        LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+        fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+        exit(EXIT_FAILURE);
+    }
+}
+// --- END      || BLOCK OPERATIONS ---
+
+// --- START    || FILE OPERATIONS ---
+//Check if file exists in Block
+bool checkFileExist(char *fileName) {
+    if (countFilesRecursively(fileName, "DISK", true) > 0) {
+        return true;
+    }
+    return false;
+}
+
+//Count files recursively
+int countFilesRecursively(char *fileName, char *basePath, bool outermost) {
+    char path[1000];
+    struct dirent *dp;
+    DIR *dir = opendir(basePath);
+
+    int instanceCount = 0;
+
+    //Check if item is directory
+    if (!dir)
+        return 0;
+
+    while ((dp = readdir(dir)) != NULL) {
+        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            char *file = removeElementIdentiferExtension(dp->d_name); //Get generic file name
+
+            if (strcmp(file, removetxtExtension(fileName)) != 0) instanceCount++;
+
+            strcpy(path, basePath);
+            strcat(path, "/");
+            strcat(path, dp->d_name);
+
+            countFilesRecursively(fileName, path, false);
+        }
+    }
+
+    closedir(dir);
+    return instanceCount;
+}
+// --- END      || FILE OPERATIONS ---
+
+// --- START    ||  VALIDATION OPERATIONS ---
+//Check file is of type '.txt' and has no dashes in name
+bool checkFileValid(char *filePath) {
+    //Check file is of type '.txt'
+    if (strcmp(getFilenameExtension(removeFilePath(filePath)), "txt") == 0) {
+        //Check file does not have any dashes in file name
+        if (!(strstr(removeFilePath(filePath), "-"))) {
+            return true;
+        } else {
+            LOGWARN("Invalid File Name: '%s' cannot haves dashes (-) in name.", filePath);
+            return false;
+        }
+    } else {
+        LOGWARN("Invalid File Type: '%s' is not of type '.txt'.", filePath);
+        return false;
+    }
+
+}
+
+//Remove path from file name
+char *removeFilePath(char *fullName) {
+    return strrchr(fullName, '/') ? strrchr(fullName, '/') + 1 : fullName;
 }
 
 //Check for .txt file extension
+char *getFilenameExtension(char *filename) {
+    char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename) return "";
+    return dot + 1;
+}
 
 //Removes the .txt file extension of filename manipulation
-char *removetxtExtension(const char *filename) {
-    size_t len = strlen(filename);
-    char *newfilename = malloc(len-2);
-    if (!newfilename) {
-        LOGERROR("Error Removing Extension from New Block Filename. Exiting");
-        exit(EXIT_FAILURE);
+char *removetxtExtension(char *fileName) {
+    char *fname = fileName;
+    char *end = fname + strlen(fname);
+
+    while (end > fname && *end != '.' && *end != '\\' && *end != '/') {
+        --end;
     }
-    memcpy(newfilename, filename, len-4);
-    newfilename[len - 3] = 0;
-    return newfilename;
+    if ((end > fname && *end == '.') &&
+        (*(end - 1) != '\\' && *(end - 1) != '/')) {
+        *end = '\0';
+    }
+    return fname;
 }
 
 //Removes the file element identifier from the fileName for validation
@@ -702,3 +774,27 @@ char *removeElementIdentiferExtension(char *fileNameID) {
 
     return fileNameID;
 }
+// --- END      ||  VALIDATION OPERATIONS ---
+
+// --- START    || TIME STAMP OPERATIONS ---
+//Return String with Formatted Date and Time
+char *getTimeStamp(void) {
+    time_t t = time(NULL);
+
+    static char result[21];
+    strftime(result, sizeof(result), "[%d/%m/%Y %T]", localtime(&t));
+
+    return result;
+}
+
+//Return String with Formatted Date
+char *getDateStamp(void) {
+    time_t t = time(NULL);
+
+    static char result[20];
+    strftime(result, sizeof(result), "%Y-%m-%d", localtime(&t));
+
+    return result;
+}
+// --- END    || TIME STAMP OPERATIONS ---
+// --- END      ||  UTILITIES ---
