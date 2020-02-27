@@ -21,7 +21,7 @@
 //Global Variables
 int BLOCKLIMIT = 512; //Maximum permitted Block Size (Unit: Bytes)
 
-int instanceCount;
+int instanceCount; //Global file instance count used for recursion algorithm
 
 // --- START    || FILE DEFINITIONS ---
 //Main File Functions
@@ -324,21 +324,23 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
     }
 
     //Open file to write to
-    FILE *outputFile = fopen(target, "w");
+    FILE *outputFile = fopen(target, "a");
     if (!outputFile) {
         LOGERROR("Cannot write to output path. Exiting.");
         return false;
     };
 
+    LOGINFONR("Retrieve: %s", retrievePath);
+
     int blockCount = 0; //Index of blocks
-    int elementCount = countFilesRecursively(retrievePath, "DISK", true); //Count of file elements
+    int elementCount = countFilesRecursively(retrievePath, "DISK", true) / 2; //Count of file elements
     int elementIndex = 0; //Index of file elements
 
     if (blockCount == 0) LOGDEBUGNR("DETECTED BLOCKS:");
 
-
     while (elementIndex < elementCount) {
-        LOGINFONR("Index: %d\tCount: %d", elementIndex, elementCount);
+        //LOGINFONR("Retrieve: %s", retrievePath);
+        //LOGINFONR("Index: %d\tCount: %d\t Block: %d", elementIndex, elementCount, blockCount);
 
         char *fileRetrieve = retrievePath;
 
@@ -376,22 +378,46 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
                         strcat(requestedFileName, requestedIndex);
 
                         if (strcmp(blockElementFileName, requestedFileName) == 0) {
-                            LOGDEBUGNR("\t--> DETECTED: %s", fullPath);
+                            LOGINFONR("\t--> DETECTED: %s", fullPath);
+                            //START -- Append Element to File
+
+                            char c;
+
+                            //Open file element
+                            FILE *inputFile = fopen(fullPath, "r");
+                            if (inputFile == NULL) {
+                                LOGERROR("Cannot read file. Exiting.");
+                                return false;
+                            }
+
+                            //Read file element and write to output file
+                            c = fgetc(inputFile);
+                            while (c != EOF) {
+                                fputc(c, outputFile);
+                                c = fgetc(inputFile);
+                            }
+
+                            //END -- Append Element to File
                             elementIndex++;
                             blockCount++;
                             break;
                         } else {
                             blockCount++;
                         }
+
                     }
                 }
                 closedir(d);
-                break;
-            } else if (ENOENT == errno) {
-                //Directory does not exist. Block search ends.
+
+                //Block element search completed, break loop
                 if (blockCount >= countFilesRecursively("BLOCK", "DISK", true)) {
                     break;
                 }
+
+                break;
+
+            } else if (ENOENT == errno) {
+                //Directory does not exist. Search for given block directory ends.
                 blockCount++;
                 continue;
             } else {
@@ -401,12 +427,6 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
                 return false;
             }
         }
-
-        //If all blocks searched for next possible element without success break loop
-        if (blockCount >= countFilesRecursively("BLOCK", "DISK", true)) {
-            break;
-        }
-
         //END -- FIND ELEMENT FILE
     }
 
