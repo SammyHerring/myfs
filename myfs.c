@@ -21,6 +21,8 @@
 //Global Variables
 int BLOCKLIMIT = 512; //Maximum permitted Block Size (Unit: Bytes)
 
+int instanceCount;
+
 // --- START    || FILE DEFINITIONS ---
 //Main File Functions
 void storeFile(char *storeFilePath);
@@ -171,7 +173,7 @@ void retrieveFile(char *retrievePath, char *outputPath) {
     if (checkFileValid(retrievePath)) {
         LOGINFONR("File System -- Retrieve");
         if (retrieveFileBlock(retrievePath, outputPath)) {
-            LOGINFO("Retrieving File %s Succeeded.", retrievePath);
+            LOGINFO("Retrieving File %s.txt Succeeded.", removeElementIdentiferExtension(retrievePath));
             exit(EXIT_SUCCESS);
         } else {
             LOGWARN("Retrieving File %s Failed.", retrievePath);
@@ -203,8 +205,11 @@ void deleteFile(char *deleteFileName) {
 //Store File to Block
 bool storeFileBlock(char *storeFilePath) {
 
+    LOGINFO("File : %s", storeFilePath);
+
     //Check if file already exists in DISK and Overwrite if required
     char *fileCheck = removeFilePath(storeFilePath);
+
     if (checkFileExist(fileCheck)) {
         LOGINFO("Overwriting File: %s.txt", fileCheck);
         if (deleteFileBlock(fileCheck)) {
@@ -213,8 +218,14 @@ bool storeFileBlock(char *storeFilePath) {
             LOGERRORNR("RECORD Cleanup not successful.");
             return false;
         }
+    }
+
+    //Add file extension if not exists
+    if (strcmp(getFilenameExtension(storeFilePath), "txt") != 0) {
         strcat(storeFilePath, ".txt");
     }
+
+    LOGINFONR("%s", storeFilePath);
 
     FILE *inputFile = fopen(storeFilePath, "rb");
     if (!inputFile) {
@@ -298,15 +309,16 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
         return false;
     }
 
-    //Append .txt extension
-    strcat(retrievePath, ".txt");
+    //Add file extension if not exists
+    if (strcmp(getFilenameExtension(retrievePath), "txt") != 0) {
+        strcat(retrievePath, ".txt");
+    }
 
     //If no output selected, append file name and extension to default file path
     char *target = malloc(strlen(outputPath) + strlen(retrievePath) + 1);
     if (strcmp(outputPath, "Output/") == 0) {
         strcpy(target, outputPath);
         strcat(target, retrievePath);
-        //free(target);
     } else {
         strcat(target, outputPath);
     }
@@ -318,12 +330,84 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
         return false;
     };
 
-    int elementCount = countFilesRecursively(retrievePath, "DISK", true);
-    int elementIndex = 0;
+    int blockCount = 0; //Index of blocks
+    int elementCount = countFilesRecursively(retrievePath, "DISK", true); //Count of file elements
+    int elementIndex = 0; //Index of file elements
 
-    while (elementIndex <= elementCount) {
+    if (blockCount == 0) LOGDEBUGNR("DETECTED BLOCKS:");
+
+
+    while (elementIndex < elementCount) {
         LOGINFONR("Index: %d\tCount: %d", elementIndex, elementCount);
-        elementIndex++;
+
+        char *fileRetrieve = retrievePath;
+
+        //START -- FIND ELEMENT FILE
+
+        while (true) {
+            char num[20] = "";
+            sprintf(num, "%d", blockCount);
+            char name[25] = "BLOCK";
+            strcat(name, num);
+
+            char path[30] = "DISK/";
+            strcat(path, name);
+
+            DIR *d;
+            struct dirent *dir;
+            d = opendir(path);
+
+            if (d) {
+                while ((dir = readdir(d)) != NULL) {
+                    if (dir->d_type == DT_REG) {
+                        char *fileName = dir->d_name;
+                        char fullPath[30] = "";
+                        strcat(fullPath, path);
+                        strcat(fullPath, "/");
+                        strcat(fullPath, fileName);
+
+                        char *blockElementFileName = removetxtExtension(fileName);
+                        char *requestedFileName = removetxtExtension(fileRetrieve);
+
+                        char requestedIndex[100] = "";
+                        sprintf(requestedIndex, "-%d", elementIndex);
+
+                        requestedFileName = removeElementIdentiferExtension(requestedFileName);
+                        strcat(requestedFileName, requestedIndex);
+
+                        if (strcmp(blockElementFileName, requestedFileName) == 0) {
+                            LOGDEBUGNR("\t--> DETECTED: %s", fullPath);
+                            elementIndex++;
+                            blockCount++;
+                            break;
+                        } else {
+                            blockCount++;
+                        }
+                    }
+                }
+                closedir(d);
+                break;
+            } else if (ENOENT == errno) {
+                //Directory does not exist. Block search ends.
+                if (blockCount >= countFilesRecursively("BLOCK", "DISK", true)) {
+                    break;
+                }
+                blockCount++;
+                continue;
+            } else {
+                //Directory detection failed. Kill script.
+                LOGERROR("\'opendir()\' failed to detect %s directory. Exiting.", name);
+                fprintf(stderr, "\'opendir()\' failed to detect %s directory. Exiting\n", name);
+                return false;
+            }
+        }
+
+        //If all blocks searched for next possible element without success break loop
+        if (blockCount >= countFilesRecursively("BLOCK", "DISK", true)) {
+            break;
+        }
+
+        //END -- FIND ELEMENT FILE
     }
 
     fclose(outputFile);
@@ -717,12 +801,14 @@ bool checkFileExist(char *fileName) {
 }
 
 //Count files recursively
-int countFilesRecursively(char *fileName, char *basePath, bool outermost) {
+int countFilesRecursively(char *fileNameCount, char *basePath, bool outermost) {
     char path[1000];
     struct dirent *dp;
     DIR *dir = opendir(basePath);
 
-    int instanceCount = 0;
+    if (outermost) {
+        int instanceCount = 0;
+    }
 
     //Check if item is directory
     if (!dir)
@@ -730,15 +816,18 @@ int countFilesRecursively(char *fileName, char *basePath, bool outermost) {
 
     while ((dp = readdir(dir)) != NULL) {
         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
-            char *file = removeElementIdentiferExtension(dp->d_name); //Get generic file name
 
-            if (strcmp(file, removetxtExtension(fileName)) != 0) instanceCount++;
+            char *file = removeElementIdentiferExtension(dp->d_name); //Get generic file name
+            char *compareFile = removetxtExtension(fileNameCount);
+
+
+            if (strcmp(file, compareFile) == 0) instanceCount++;
 
             strcpy(path, basePath);
             strcat(path, "/");
             strcat(path, dp->d_name);
 
-            countFilesRecursively(fileName, path, false);
+            countFilesRecursively(fileNameCount, path, false);
         }
     }
 
