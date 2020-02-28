@@ -10,21 +10,23 @@
 .\" Use .Nm macro to designate other names for the documented program.
 .Sh SYNOPSIS             \" Section Header - required - don't modify
 .Nm
-.Op Fl g
-.Ar (file.csv)
-.Op Fl v
-.Op Fl r
-.Op Fl o
 .Op Fl s
+.Ar (file.txt)
+.Op Fl r
+.Ar (file.txt)
+.Op Fl o
+.Ar (Output/file.txt)
+.Op Fl d
+.Ar (file.txt)
 .Op Fl h
 .Sh DESCRIPTION          \" Section Header - required - don't modify
-This script is intended to be used by system administrators in conjunction with a formatted '.csv' file to generate and mannipulate account creation processes. See 'example.csv' for the required user data format. Flags may be used when calling the script to avoid a GUI-orientated process, although it is recomended for first-time users.
+This script is intended to simulate a block-based file system. Where '.txt' files may be stored, overwritten, retrieved and deleted inside a 'DISK' directory. See example text files in the 'Documents' directory. Flags may be used when calling the script to select modes and operations.
 .Pp                      \" Inserts a space
 
 Script Files:
 .Bl -tag -width -indent  \" Begins a tagged list
-.It Pa file.csv               \" Each item preceded by .It macro
-A '.csv' file containing the required user data for user generation and manipulation.
+.It Pa file.txt               \" Each item preceded by .It macro
+A '.txt' file containing data required to be manipulated by the file system.
 .Bl -indent See 'example.csv' for format and layout constraints.
 .
 .El                      \" Ends the list
@@ -32,21 +34,19 @@ A '.csv' file containing the required user data for user generation and manipula
 
 Script Flags (flags may be used to skip GUI features):
 .Bl -tag -width -indent  \" Differs from above in tag removed
-.It Fl g                 \"-a flag as a list item
-Generate Users using the second argument provided as a file location.
-.It Fl v
-View Current Account Creation Processes in CLI.
-.It Fl e
-Export Current Account Creation Processes to Log File.
-.It Fl k
-Kill Current Account Creation Processes.
+.It Fl s                 \"-a flag as a list item
+Store the argument file in the file system. If version of file already exists, it will be overwritten.
+.It Fl r
+Retrieve the argument file from the file system. By default, the 'Output' directory is used.
+.It Fl o
+Specify a output location when calling the retrieval method. Use -r then -o with both arguments.
+.It Fl d
+Delete the argument file from the system.
 .It Fl h
-Show 'userMan' MAN Help Page
-.It Fl -help
-Show 'userMan' MAN Help Page, just like "-h".
+Get help with the file location for (this) man page.
 .El                      \" Ends the list
 .Pp
- Note: Flags may be used in combination, although it is not expected in normal use.
+ Note: Some flags may be used in combination. If secondary flag is invalid, it will not be triggered.
 .Pp
 .\" .Sh ENVIRONMENT      \" May not be needed
 .\" .Bl -tag -width "ENV_VAR_1" -indent \" ENV_VAR_1 is width of the string ENV_VAR_1
@@ -57,13 +57,19 @@ Show 'userMan' MAN Help Page, just like "-h".
 .\" .El
 .Sh FILES                \" File used or created by the topic of the man page
 .Bl -tag -width -indent  \" Begins a tagged list
-.It ~/(userManDirectory)/userMan.sh
-System entrypoint to be called to use userMan Script
-.It Pa ~/(userManDirectory)/example.csv
-Example '.CSV' File showing correct format for user data
-.It Pa ~/(userManDirectory)/(file).csv
-Actual '.CSV' File that the user will provide.
-.It Pa ~/(userManDirectory)/userMan-Help
-userMan Help Guide File
+.It ~/(myfsDirectory)/myfs.c
+System entrypoint to be called to use myfs Script
+.It ~/(myfsDirectory)/logger.h
+Seperate script called my 'myfs' to handle all logging of events.
+.It Pa ~/(myfsDirectory)/Documents/letter1.txt
+Example '.txt' File - letter1.txt
+.It Pa ~/(myfsDirectory)/Documents/letter2.txt
+Example '.txt' File - letter2.txt
+.It Pa ~/(myfsDirectory)/Documents/letter3.txt
+Example '.txt' File - letter3.txt
+.It Pa ~/(myfsDirectory)/(file).txt
+Actual '.txt' File that user will provide to store in file system.
+.It Pa ~/(myfsDirectory)/myfs-help
+myfs Help Guide File
 .El                      \" Ends the list
 .\" .Sh HISTORY           \" Document history if command behaves in a unique manner

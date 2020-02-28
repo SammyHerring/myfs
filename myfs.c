@@ -14,8 +14,8 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <time.h>
-#include <logger.h>
 #include <stdbool.h>
+#include <logger.h>
 
 // --- START    || GLOBALS ---
 //Global Variables
@@ -157,10 +157,10 @@ void storeFile(char *storeFilePath) {
     if (checkFileValid(storeFilePath)) {
         LOGINFONR("File System -- Store");
         if (storeFileBlock(storeFilePath)) {
-            LOGINFO("Storing File %s Succeeded.", storeFilePath);
+            LOGINFO("Storing File %s.txt Succeeded.", storeFilePath);
             exit(EXIT_SUCCESS);
         } else {
-            LOGWARN("Storing File %s Failed.", storeFilePath);
+            LOGWARN("Storing File %s.txt Failed.", storeFilePath);
             exit(EXIT_FAILURE);
         }
     } else {
@@ -176,7 +176,7 @@ void retrieveFile(char *retrievePath, char *outputPath) {
             LOGINFO("Retrieving File %s.txt Succeeded.", removeElementIdentiferExtension(retrievePath));
             exit(EXIT_SUCCESS);
         } else {
-            LOGWARN("Retrieving File %s Failed.", retrievePath);
+            LOGWARN("Retrieving File %s.txt Failed.", retrievePath);
             exit(EXIT_FAILURE);
         }
     } else {
@@ -189,10 +189,10 @@ void deleteFile(char *deleteFileName) {
     if (checkFileValid(deleteFileName)) {
         LOGINFONR("File System -- Delete");
         if (deleteFileBlock(deleteFileName)) {
-            LOGINFO("Deleting File %s Succeeded.", deleteFileName);
+            LOGINFO("Deleting File %s.txt Succeeded.", deleteFileName);
             exit(EXIT_SUCCESS);
         } else {
-            LOGWARN("Deleting File %s Failed.", deleteFileName);
+            LOGWARN("Deleting File %s.txt Failed.", deleteFileName);
             exit(EXIT_FAILURE);
         }
     } else {
@@ -204,9 +204,6 @@ void deleteFile(char *deleteFileName) {
 // -- START     || BLOCK MANAGER FUNCTIONS ---
 //Store File to Block
 bool storeFileBlock(char *storeFilePath) {
-
-    LOGINFO("File : %s", storeFilePath);
-
     //Check if file already exists in DISK and Overwrite if required
     char *fileCheck = removeFilePath(storeFilePath);
 
@@ -225,12 +222,10 @@ bool storeFileBlock(char *storeFilePath) {
         strcat(storeFilePath, ".txt");
     }
 
-    LOGINFONR("%s", storeFilePath);
-
     FILE *inputFile = fopen(storeFilePath, "rb");
     if (!inputFile) {
         LOGERROR("Cannot read store file. Exiting.");
-        exit(EXIT_FAILURE);
+        return false;
     };
 
     //File Stats
@@ -330,8 +325,6 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
         return false;
     };
 
-    LOGINFONR("Retrieve: %s", retrievePath);
-
     int blockCount = 0; //Index of blocks
     int elementCount = countFilesRecursively(retrievePath, "DISK", true) / 2; //Count of file elements
     int elementIndex = 0; //Index of file elements
@@ -339,12 +332,10 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
     if (blockCount == 0) LOGDEBUGNR("DETECTED BLOCKS:");
 
     while (elementIndex < elementCount) {
-        //LOGINFONR("Retrieve: %s", retrievePath);
-        //LOGINFONR("Index: %d\tCount: %d\t Block: %d", elementIndex, elementCount, blockCount);
 
         char *fileRetrieve = retrievePath;
 
-        //START -- FIND ELEMENT FILE
+        //START -- FIND ELEMENT FILES
 
         while (true) {
             char num[20] = "";
@@ -378,10 +369,10 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
                         strcat(requestedFileName, requestedIndex);
 
                         if (strcmp(blockElementFileName, requestedFileName) == 0) {
-                            LOGINFONR("\t--> DETECTED: %s", fullPath);
+                            LOGINFONR("\t--> BLOCK: %s", fullPath);
                             //START -- Append Element to File
 
-                            char c;
+                            char c; //Character Buffer Variable
 
                             //Open file element
                             FILE *inputFile = fopen(fullPath, "r");
@@ -427,7 +418,7 @@ bool retrieveFileBlock(char *retrievePath, char *outputPath) {
                 return false;
             }
         }
-        //END -- FIND ELEMENT FILE
+        //END -- FIND ELEMENT FILES
     }
 
     fclose(outputFile);
@@ -472,7 +463,7 @@ bool deleteFileBlock(char *deleteFileName) {
 
                     if (strcmp(blockElementFileName, requestedFileName) == 0) {
                         remove(fullPath);
-                        LOGDEBUGNR("\t--> DELETED: %s", fullPath);
+                        LOGDEBUGNR("\t--> BLOCK: %s", fullPath);
                     }
                 }
             }
@@ -591,6 +582,7 @@ int generateNextBlock() {
         }
     }
 }
+
 //Delete empty blocks
 bool deleteEmptyBlocks() {
     int blockCount = 0;
@@ -906,6 +898,7 @@ char *removetxtExtension(char *fileName) {
 char *removeElementIdentiferExtension(char *fileNameID) {
     char *ptr;
 
+    //Removes the dash and element identifier from string
     ptr = strchr(fileNameID, '-');
     if (ptr != NULL) {
         *ptr = '\0';
