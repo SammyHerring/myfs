@@ -1,0 +1,75 @@
+.Dd 28/01/20               \" DATE
+.Dt myfs 1.0.0      \" Program name and manual section number
+.Os Jessie
+.Sh NAME                 \" Section Header - required - don't modify
+.Nm myfs,
+.\" The following lines are read in generating the apropos(man -k) database. Use only key
+.\" words here as the database is built based on the words here and in the .ND line.
+.Nm ./myfs,
+.Nm myFileSystem.
+.\" Use .Nm macro to designate other names for the documented program.
+.Sh SYNOPSIS             \" Section Header - required - don't modify
+.Nm
+.Op Fl s
+.Ar (file.txt)
+.Op Fl r
+.Ar (file.txt)
+.Op Fl o
+.Ar (Output/file.txt)
+.Op Fl d
+.Ar (file.txt)
+.Op Fl h
+.Sh DESCRIPTION          \" Section Header - required - don't modify
+This script is intended to simulate a block-based file system. Where '.txt' files may be stored, overwritten, retrieved and deleted inside a 'DISK' directory. See example text files in the 'Documents' directory. Flags may be used when calling the script to select modes and operations.
+.Pp                      \" Inserts a space
+
+Script Files:
+.Bl -tag -width -indent  \" Begins a tagged list
+.It Pa file.txt               \" Each item preceded by .It macro
+A '.txt' file containing data required to be manipulated by the file system.
+.Bl -indent See 'example.csv' for format and layout constraints.
+.
+.El                      \" Ends the list
+.Pp
+
+Script Flags (flags may be used to skip GUI features):
+.Bl -tag -width -indent  \" Differs from above in tag removed
+.It Fl s                 \"-a flag as a list item
+Store the argument file in the file system. If version of file already exists, it will be overwritten.
+.It Fl r
+Retrieve the argument file from the file system. By default, the 'Output' directory is used.
+.It Fl o
+Specify a output location when calling the retrieval method. Use -r then -o with both arguments.
+.It Fl d
+Delete the argument file from the system.
+.It Fl h
+Get help with the file location for (this) man page.
+.El                      \" Ends the list
+.Pp
+ Note: Some flags may be used in combination. If secondary flag is invalid, it will not be triggered.
+.Pp
+.\" .Sh ENVIRONMENT      \" May not be needed
+.\" .Bl -tag -width "ENV_VAR_1" -indent \" ENV_VAR_1 is width of the string ENV_VAR_1
+.\" .It Ev ENV_VAR_1
+.\" Description of ENV_VAR_1
+.\" .It Ev ENV_VAR_2
+.\" Description of ENV_VAR_2
+.\" .El
+.Sh FILES                \" File used or created by the topic of the man page
+.Bl -tag -width -indent  \" Begins a tagged list
+.It ~/(myfsDirectory)/myfs.c
+System entrypoint to be called to use myfs Script
+.It ~/(myfsDirectory)/logger.h
+Seperate script called my 'myfs' to handle all logging of events.
+.It Pa ~/(myfsDirectory)/Documents/letter1.txt
+Example '.txt' File - letter1.txt
+.It Pa ~/(myfsDirectory)/Documents/letter2.txt
+Example '.txt' File - letter2.txt
+.It Pa ~/(myfsDirectory)/Documents/letter3.txt
+Example '.txt' File - letter3.txt
+.It Pa ~/(myfsDirectory)/(file).txt
+Actual '.txt' File that user will provide to store in file system.
+.It Pa ~/(myfsDirectory)/myfs-help
+myfs Help Guide File
+.El                      \" Ends the list
+.\" .Sh HISTORY           \" Document history if command behaves in a unique manner
