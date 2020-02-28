@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: configure
-      run: ./configure
+      run: cmake-build-debug/cmake_install.cmake
     - name: make
       run: make
     - name: make check
