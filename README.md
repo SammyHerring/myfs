@@ -1,10 +1,10 @@
-##System Title: myfs, ./myfs, myFileSystem.
+#System: myfs, ./myfs, myFileSystem.
 
-#Release: v1.0.0
+###Release: v1.0.0
 
 #Author: Samuel S.D. Herring
 
-#Author URI: https://traveller.coffee
+###Author URI: https://traveller.coffee
 
 ---
 
